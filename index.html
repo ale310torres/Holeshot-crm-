@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CRM operativo para gestionar leads, clientes, servicios y seguimientos de Holeshot."
+    />
+    <title>Holeshot CRM</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Navegacion principal">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">H</span>
+          <div>
+            <strong>Holeshot</strong>
+            <span>CRM operativo</span>
+          </div>
+        </div>
+
+        <nav class="nav-list">
+          <button class="nav-link active" data-view="dashboard">Tablero</button>
+          <button class="nav-link" data-view="leads">Ventas</button>
+          <button class="nav-link" data-view="services">Servicios</button>
+          <button class="nav-link" data-view="tasks">Seguimientos</button>
+          <button class="nav-link" data-view="clients">Clientes</button>
+          <button class="nav-link" data-view="reports">Reportes</button>
+          <button class="nav-link" data-view="settings">Datos</button>
+        </nav>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Sistema independiente</p>
+            <h1 id="view-title">Tablero Holeshot</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="search">
+              <span>Buscar</span>
+              <input id="global-search" type="search" placeholder="Cliente, telefono, interes..." />
+            </label>
+            <button class="button primary" data-action="new-lead">Nuevo lead</button>
+          </div>
+        </header>
+
+        <main id="app" class="content" tabindex="-1"></main>
+      </div>
+    </div>
+
+    <div id="modal" class="modal" hidden>
+      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-header">
+          <h2 id="modal-title"></h2>
+          <button class="icon-button" data-action="close-modal" aria-label="Cerrar">x</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+
+    <input id="import-file" type="file" accept="application/json" hidden />
+    <script src="app.js" defer></script>
+  </body>
+</html>
