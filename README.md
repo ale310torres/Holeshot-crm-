@@ -31,7 +31,7 @@ Desde esta carpeta:
 ```powershell
 git init
 git branch -M main
-git add .gitignore README.md index.html styles.css app.js vercel.json
+git add .gitignore README.md index.html styles.css app.js logo.png vercel.json
 git commit -m "Crear CRM Holeshot"
 git remote add origin https://github.com/TU_USUARIO/holeshot-crm.git
 git push -u origin main
