@@ -1,4 +1,6 @@
-const STORAGE_KEY = "holeshot-crm:v1";
+const SUPABASE_URL = "https://esjqybxzpqtonkcomdtb.supabase.co";
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzanF5Ynh6cHF0b25rY29tZHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTE2NTgsImV4cCI6MjA5OTcyNzY1OH0.DEGP5xyOsdl41qFiFaoZfophSKiWdXIcKmq7_wv9nbg";
 
 const SALES_STAGES = [
   "Nuevo lead",
@@ -32,158 +34,49 @@ const modalBody = document.querySelector("#modal-body");
 const searchInput = document.querySelector("#global-search");
 const importInput = document.querySelector("#import-file");
 const viewTitle = document.querySelector("#view-title");
+const syncStatus = document.querySelector("#sync-status");
+const signOutButton = document.querySelector("#sign-out-button");
+const newLeadTop = document.querySelector("#new-lead-top");
+
+const supabaseClient = window.supabase?.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 let currentView = "dashboard";
-let state = loadState();
+let session = null;
+let loading = true;
+let state = emptyState();
 
-function uid() {
-  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-function seedState() {
-  const today = new Date();
-  const inDays = (days) => {
-    const date = new Date(today);
-    date.setDate(date.getDate() + days);
-    return date.toISOString().slice(0, 10);
-  };
-
+function emptyState() {
   return {
-    contacts: [
-      {
-        id: uid(),
-        name: "Cliente demo venta",
-        phone: "70000001",
-        channel: "Instagram",
-        type: "Nuevo",
-        lastContact: inDays(-1),
-        notes: "Interesado en compra y accesorios.",
-      },
-      {
-        id: uid(),
-        name: "Cliente demo servicio",
-        phone: "70000002",
-        channel: "WhatsApp",
-        type: "Recurrente",
-        lastContact: inDays(-2),
-        notes: "Necesita seguimiento postservicio.",
-      },
-    ],
+    contacts: [],
     opportunities: [],
     services: [],
     tasks: [],
-    settings: {
-      owners: OWNERS,
-      channels: CHANNELS,
-      interests: INTERESTS,
-    },
   };
 }
 
-function createDemoRecords(base) {
-  const today = new Date();
-  const date = (days) => {
-    const next = new Date(today);
-    next.setDate(next.getDate() + days);
-    return next.toISOString().slice(0, 10);
-  };
-  const firstContact = base.contacts[0];
-  const secondContact = base.contacts[1];
-
-  base.opportunities.push({
-    id: uid(),
-    contactId: firstContact.id,
-    title: "Cotizacion inicial",
-    interest: "Accesorio",
-    budget: 450,
-    value: 520,
-    urgency: "Alta",
-    stage: "Cotizacion enviada",
-    owner: "Ventas",
-    nextAction: "Enviar alternativas y confirmar disponibilidad.",
-    followUpDate: date(1),
-    createdAt: date(-4),
-    notes: "Pregunto por opciones y forma de pago.",
-    lostReason: "",
+function uid() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
   });
-
-  base.services.push({
-    id: uid(),
-    contactId: secondContact.id,
-    asset: "Moto cliente",
-    request: "Revision general y mantenimiento preventivo",
-    stage: "En proceso",
-    quotedValue: 280,
-    dueDate: date(2),
-    owner: "Servicio",
-    notes: "Avisar apenas este lista para entrega.",
-  });
-
-  base.tasks.push({
-    id: uid(),
-    title: "Seguimiento a cotizacion demo",
-    dueDate: date(1),
-    owner: "Ventas",
-    priority: "Alta",
-    status: "Pendiente",
-    relatedType: "opportunity",
-    relatedId: base.opportunities[0].id,
-  });
-
-  base.tasks.push({
-    id: uid(),
-    title: "Confirmar entrega de servicio demo",
-    dueDate: date(2),
-    owner: "Servicio",
-    priority: "Media",
-    status: "Pendiente",
-    relatedType: "service",
-    relatedId: base.services[0].id,
-  });
-
-  return base;
 }
 
-function loadState() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) {
-    const demo = createDemoRecords(seedState());
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(demo));
-    return demo;
-  }
-
-  try {
-    const parsed = JSON.parse(saved);
-    return {
-      contacts: parsed.contacts || [],
-      opportunities: parsed.opportunities || [],
-      services: parsed.services || [],
-      tasks: parsed.tasks || [],
-      settings: {
-        owners: parsed.settings?.owners || OWNERS,
-        channels: parsed.settings?.channels || CHANNELS,
-        interests: parsed.settings?.interests || INTERESTS,
-      },
-    };
-  } catch {
-    const demo = createDemoRecords(seedState());
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(demo));
-    return demo;
-  }
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function setView(view) {
-  currentView = view;
-  document.querySelectorAll(".nav-link").forEach((button) => {
-    button.classList.toggle("active", button.dataset.view === view);
-  });
-  render();
-  app.focus();
+function dateShift(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function escapeHtml(value = "") {
@@ -203,18 +96,14 @@ function money(value) {
   }).format(Number(value || 0));
 }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isOverdue(date, status = "Pendiente") {
-  return status !== "Completada" && date && date < todayIso();
-}
-
 function dateLabel(date) {
   if (!date) return "Sin fecha";
   const parsed = new Date(`${date}T12:00:00`);
   return parsed.toLocaleDateString("es-BO", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function isOverdue(date, status = "Pendiente") {
+  return status !== "Completada" && date && date < todayIso();
 }
 
 function byId(collection, id) {
@@ -235,6 +124,19 @@ function matchesSearch(...values) {
   const query = searchInput.value.trim().toLowerCase();
   if (!query) return true;
   return values.some((value) => String(value || "").toLowerCase().includes(query));
+}
+
+function setSync(message, tone = "neutral") {
+  syncStatus.textContent = message;
+  syncStatus.dataset.tone = tone;
+}
+
+function updateChrome(title, signedIn = Boolean(session)) {
+  viewTitle.textContent = title;
+  searchInput.disabled = !signedIn;
+  newLeadTop.hidden = !signedIn;
+  signOutButton.hidden = !signedIn;
+  if (!signedIn) setSync("Sin sesion", "warning");
 }
 
 function optionList(items, selected = "") {
@@ -276,227 +178,280 @@ function getFormData(form) {
   return Object.fromEntries(new FormData(form).entries());
 }
 
-function findOrCreateContact(data) {
-  const phone = data.phone?.trim();
-  let contact = state.contacts.find((item) => item.phone && item.phone === phone);
-  if (!contact) {
-    contact = {
-      id: uid(),
-      name: data.name.trim(),
-      phone,
-      channel: data.channel,
-      type: data.clientType || "Nuevo",
-      lastContact: todayIso(),
-      notes: data.contactNotes || "",
-    };
-    state.contacts.unshift(contact);
-  } else {
-    contact.name = data.name.trim();
-    contact.channel = data.channel || contact.channel;
-    contact.lastContact = todayIso();
-    contact.notes = data.contactNotes || contact.notes;
+function contactFromDb(row) {
+  return {
+    id: row.id,
+    name: row.name || "",
+    phone: row.phone || "",
+    channel: row.channel || "",
+    type: row.type || "",
+    lastContact: row.last_contact || "",
+    notes: row.notes || "",
+  };
+}
+
+function contactToDb(item) {
+  return {
+    ...(item.id ? { id: item.id } : {}),
+    name: item.name,
+    phone: item.phone,
+    channel: item.channel || null,
+    type: item.type || null,
+    last_contact: item.lastContact || null,
+    notes: item.notes || null,
+  };
+}
+
+function opportunityFromDb(row) {
+  return {
+    id: row.id,
+    contactId: row.contact_id,
+    title: row.title || "",
+    interest: row.interest || "",
+    budget: Number(row.budget || 0),
+    value: Number(row.value || 0),
+    urgency: row.urgency || "Media",
+    stage: row.stage || "Nuevo lead",
+    owner: row.owner || "Ventas",
+    nextAction: row.next_action || "",
+    followUpDate: row.follow_up_date || "",
+    createdAt: row.created_at || "",
+    notes: row.notes || "",
+    lostReason: row.lost_reason || "",
+  };
+}
+
+function opportunityToDb(item) {
+  return {
+    ...(item.id ? { id: item.id } : {}),
+    contact_id: item.contactId,
+    title: item.title,
+    interest: item.interest || null,
+    budget: Number(item.budget || 0),
+    value: Number(item.value || 0),
+    urgency: item.urgency || null,
+    stage: item.stage || "Nuevo lead",
+    owner: item.owner || null,
+    next_action: item.nextAction || null,
+    follow_up_date: item.followUpDate || null,
+    notes: item.notes || null,
+    lost_reason: item.lostReason || null,
+  };
+}
+
+function serviceFromDb(row) {
+  return {
+    id: row.id,
+    contactId: row.contact_id,
+    asset: row.asset || "",
+    request: row.request || "",
+    stage: row.stage || "Solicitud recibida",
+    quotedValue: Number(row.quoted_value || 0),
+    dueDate: row.due_date || "",
+    owner: row.owner || "Servicio",
+    notes: row.notes || "",
+  };
+}
+
+function serviceToDb(item) {
+  return {
+    ...(item.id ? { id: item.id } : {}),
+    contact_id: item.contactId,
+    asset: item.asset || null,
+    request: item.request,
+    stage: item.stage || "Solicitud recibida",
+    quoted_value: Number(item.quotedValue || 0),
+    due_date: item.dueDate || null,
+    owner: item.owner || null,
+    notes: item.notes || null,
+  };
+}
+
+function taskFromDb(row) {
+  return {
+    id: row.id,
+    title: row.title || "",
+    dueDate: row.due_date || "",
+    owner: row.owner || "Ventas",
+    priority: row.priority || "Media",
+    status: row.status || "Pendiente",
+    relatedType: row.related_type || "",
+    relatedId: row.related_id || "",
+  };
+}
+
+function taskToDb(item) {
+  return {
+    ...(item.id ? { id: item.id } : {}),
+    title: item.title,
+    due_date: item.dueDate || null,
+    owner: item.owner || null,
+    priority: item.priority || "Media",
+    status: item.status || "Pendiente",
+    related_type: item.relatedType || null,
+    related_id: item.relatedId || null,
+  };
+}
+
+function requireSupabase() {
+  if (!supabaseClient) {
+    throw new Error("No se cargo Supabase. Revisa la conexion a internet y vuelve a cargar.");
   }
-  return contact;
 }
 
-function leadForm(recordId = "") {
-  const record = byId(state.opportunities, recordId);
-  const contact = record ? getContact(record.contactId) : {};
-  const title = record ? "Editar venta" : "Nuevo lead de venta";
+async function loadRemoteData() {
+  requireSupabase();
+  loading = true;
+  renderLoading("Cargando datos de Supabase...");
+  setSync("Sincronizando", "neutral");
 
-  openModal(
-    title,
-    `<form id="lead-form" class="form-grid">
-      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
-      <div class="field">
-        <label>Nombre del cliente *</label>
-        <input name="name" required value="${escapeHtml(contact.name || "")}" />
-      </div>
-      <div class="field">
-        <label>Telefono / WhatsApp *</label>
-        <input name="phone" required value="${escapeHtml(contact.phone || "")}" />
-      </div>
-      <div class="field">
-        <label>Canal de entrada *</label>
-        <select name="channel" required>${optionList(CHANNELS, contact.channel || "WhatsApp")}</select>
-      </div>
-      <div class="field">
-        <label>Tipo de cliente</label>
-        <select name="clientType">${optionList(["Nuevo", "Recurrente", "Referido", "Mayorista"], contact.type || "Nuevo")}</select>
-      </div>
-      <div class="field">
-        <label>Interes principal *</label>
-        <select name="interest" required>${optionList(INTERESTS, record?.interest || "Servicio")}</select>
-      </div>
-      <div class="field">
-        <label>Titulo de oportunidad *</label>
-        <input name="title" required value="${escapeHtml(record?.title || "")}" placeholder="Ej. Cotizacion casco, repuesto, moto..." />
-      </div>
-      <div class="field">
-        <label>Presupuesto estimado</label>
-        <input name="budget" type="number" min="0" value="${escapeHtml(record?.budget || "")}" />
-      </div>
-      <div class="field">
-        <label>Valor potencial</label>
-        <input name="value" type="number" min="0" value="${escapeHtml(record?.value || "")}" />
-      </div>
-      <div class="field">
-        <label>Urgencia</label>
-        <select name="urgency">${optionList(URGENCIES, record?.urgency || "Media")}</select>
-      </div>
-      <div class="field">
-        <label>Responsable</label>
-        <select name="owner">${optionList(OWNERS, record?.owner || "Ventas")}</select>
-      </div>
-      <div class="field">
-        <label>Etapa</label>
-        <select name="stage">${optionList(SALES_STAGES, record?.stage || "Nuevo lead")}</select>
-      </div>
-      <div class="field">
-        <label>Fecha de seguimiento *</label>
-        <input name="followUpDate" type="date" required value="${escapeHtml(record?.followUpDate || todayIso())}" />
-      </div>
-      <div class="field full">
-        <label>Proxima accion *</label>
-        <input name="nextAction" required value="${escapeHtml(record?.nextAction || "")}" placeholder="Ej. Llamar, mandar cotizacion, confirmar pago..." />
-      </div>
-      <div class="field full">
-        <label>Notas</label>
-        <textarea name="notes">${escapeHtml(record?.notes || contact.notes || "")}</textarea>
-      </div>
-      <div class="field full">
-        <label>Motivo de perdida</label>
-        <input name="lostReason" value="${escapeHtml(record?.lostReason || "")}" placeholder="Solo si la venta se marca como perdida" />
-      </div>
-      <div class="form-footer field full">
-        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
-        <button class="button primary" type="submit">Guardar venta</button>
-      </div>
-    </form>`,
-  );
+  const [contacts, opportunities, services, tasks] = await Promise.all([
+    supabaseClient.from("contacts").select("*").order("created_at", { ascending: false }),
+    supabaseClient.from("opportunities").select("*").order("created_at", { ascending: false }),
+    supabaseClient.from("services").select("*").order("created_at", { ascending: false }),
+    supabaseClient.from("tasks").select("*").order("due_date", { ascending: true, nullsFirst: false }),
+  ]);
+
+  const error = contacts.error || opportunities.error || services.error || tasks.error;
+  if (error) throw error;
+
+  state = {
+    contacts: contacts.data.map(contactFromDb),
+    opportunities: opportunities.data.map(opportunityFromDb),
+    services: services.data.map(serviceFromDb),
+    tasks: tasks.data.map(taskFromDb),
+  };
+
+  loading = false;
+  setSync("Guardado en Supabase", "success");
+  render();
 }
 
-function serviceForm(recordId = "") {
-  const record = byId(state.services, recordId);
-  const contact = record ? getContact(record.contactId) : state.contacts[0] || {};
+async function init() {
+  try {
+    if (!supabaseClient) {
+      loading = false;
+      renderAuth("No se pudo cargar Supabase. Revisa internet y vuelve a abrir la pagina.");
+      return;
+    }
 
-  openModal(
-    record ? "Editar servicio" : "Nuevo servicio",
-    `<form id="service-form" class="form-grid">
-      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
-      <div class="field">
-        <label>Cliente existente *</label>
-        <select name="contactId" required>${contactOptions(record?.contactId || contact.id || "")}</select>
-      </div>
-      <div class="field">
-        <label>Responsable</label>
-        <select name="owner">${optionList(OWNERS, record?.owner || "Servicio")}</select>
-      </div>
-      <div class="field">
-        <label>Moto / producto</label>
-        <input name="asset" value="${escapeHtml(record?.asset || "")}" placeholder="Ej. Moto, casco, repuesto..." />
-      </div>
-      <div class="field">
-        <label>Valor cotizado</label>
-        <input name="quotedValue" type="number" min="0" value="${escapeHtml(record?.quotedValue || "")}" />
-      </div>
-      <div class="field">
-        <label>Etapa</label>
-        <select name="stage">${optionList(SERVICE_STAGES, record?.stage || "Solicitud recibida")}</select>
-      </div>
-      <div class="field">
-        <label>Fecha compromiso *</label>
-        <input name="dueDate" type="date" required value="${escapeHtml(record?.dueDate || todayIso())}" />
-      </div>
-      <div class="field full">
-        <label>Solicitud del cliente *</label>
-        <input name="request" required value="${escapeHtml(record?.request || "")}" />
-      </div>
-      <div class="field full">
-        <label>Notas de servicio</label>
-        <textarea name="notes">${escapeHtml(record?.notes || "")}</textarea>
-      </div>
-      <div class="form-footer field full">
-        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
-        <button class="button primary" type="submit">Guardar servicio</button>
-      </div>
-    </form>`,
-  );
+    const { data, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    session = data.session;
+
+    supabaseClient.auth.onAuthStateChange(async (_event, nextSession) => {
+      session = nextSession;
+      if (session) {
+        await safeLoad();
+      } else {
+        state = emptyState();
+        renderAuth();
+      }
+    });
+
+    if (session) {
+      await safeLoad();
+    } else {
+      loading = false;
+      renderAuth();
+    }
+  } catch (error) {
+    loading = false;
+    renderAuth(friendlyError(error));
+  }
 }
 
-function taskForm(recordId = "") {
-  const record = byId(state.tasks, recordId);
-  openModal(
-    record ? "Editar seguimiento" : "Nuevo seguimiento",
-    `<form id="task-form" class="form-grid">
-      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
-      <div class="field full">
-        <label>Accion pendiente *</label>
-        <input name="title" required value="${escapeHtml(record?.title || "")}" />
-      </div>
-      <div class="field">
-        <label>Fecha *</label>
-        <input name="dueDate" type="date" required value="${escapeHtml(record?.dueDate || todayIso())}" />
-      </div>
-      <div class="field">
-        <label>Responsable</label>
-        <select name="owner">${optionList(OWNERS, record?.owner || "Ventas")}</select>
-      </div>
-      <div class="field">
-        <label>Prioridad</label>
-        <select name="priority">${optionList(URGENCIES, record?.priority || "Media")}</select>
-      </div>
-      <div class="field">
-        <label>Estado</label>
-        <select name="status">${optionList(["Pendiente", "Completada"], record?.status || "Pendiente")}</select>
-      </div>
-      <div class="form-footer field full">
-        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
-        <button class="button primary" type="submit">Guardar seguimiento</button>
-      </div>
-    </form>`,
-  );
+async function safeLoad() {
+  try {
+    await loadRemoteData();
+  } catch (error) {
+    loading = false;
+    setSync("Error", "danger");
+    renderError(friendlyError(error));
+  }
 }
 
-function clientForm(recordId = "") {
-  const record = byId(state.contacts, recordId);
-  openModal(
-    record ? "Editar cliente" : "Nuevo cliente",
-    `<form id="client-form" class="form-grid">
-      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
-      <div class="field">
-        <label>Nombre *</label>
-        <input name="name" required value="${escapeHtml(record?.name || "")}" />
+function friendlyError(error) {
+  const message = error?.message || String(error);
+  if (message.includes("relation") && message.includes("does not exist")) {
+    return "Faltan tablas en Supabase. Ejecuta el archivo supabase-schema.sql en el SQL Editor.";
+  }
+  if (message.includes("row-level security") || message.includes("policy")) {
+    return "Supabase bloqueo la accion por reglas de seguridad. Revisa que hayas ejecutado supabase-schema.sql y que hayas iniciado sesion.";
+  }
+  return message;
+}
+
+function renderAuth(message = "") {
+  updateChrome("Acceso Holeshot", false);
+  document.querySelectorAll(".nav-link").forEach((button) => button.classList.remove("active"));
+  app.innerHTML = `
+    <section class="auth-wrap">
+      <div class="auth-card card">
+        <div class="auth-logo-wrap">
+          <img src="./logo.png?v=4" alt="Holeshot Power Parts" />
+        </div>
+        <h2>Entrar al CRM</h2>
+        <p class="muted">Usa el usuario creado en Supabase para guardar ventas, clientes y servicios en la nube.</p>
+        ${message ? `<div class="notice">${escapeHtml(message)}</div>` : ""}
+        <form id="auth-form" class="form-grid">
+          <div class="field full">
+            <label>Email</label>
+            <input name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="field full">
+            <label>Contrasena</label>
+            <input name="password" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="form-footer field full">
+            <button class="button primary" type="submit">Entrar</button>
+            <button class="button" type="button" data-action="sign-up">Crear usuario</button>
+          </div>
+        </form>
       </div>
-      <div class="field">
-        <label>Telefono / WhatsApp *</label>
-        <input name="phone" required value="${escapeHtml(record?.phone || "")}" />
+    </section>
+  `;
+}
+
+function renderLoading(message = "Cargando...") {
+  updateChrome("Tablero Holeshot", Boolean(session));
+  app.innerHTML = `<div class="card"><div class="card-body"><p class="muted">${escapeHtml(message)}</p></div></div>`;
+}
+
+function renderError(message) {
+  updateChrome("Necesita configuracion", Boolean(session));
+  app.innerHTML = `
+    <div class="card">
+      <div class="card-header"><h2>No se pudo cargar el CRM</h2></div>
+      <div class="card-body">
+        <div class="notice">${escapeHtml(message)}</div>
+        <br />
+        <button class="button primary" data-action="reload-data">Reintentar</button>
       </div>
-      <div class="field">
-        <label>Canal</label>
-        <select name="channel">${optionList(CHANNELS, record?.channel || "WhatsApp")}</select>
-      </div>
-      <div class="field">
-        <label>Tipo</label>
-        <select name="type">${optionList(["Nuevo", "Recurrente", "Referido", "Mayorista"], record?.type || "Nuevo")}</select>
-      </div>
-      <div class="field">
-        <label>Ultimo contacto</label>
-        <input name="lastContact" type="date" value="${escapeHtml(record?.lastContact || todayIso())}" />
-      </div>
-      <div class="field full">
-        <label>Notas</label>
-        <textarea name="notes">${escapeHtml(record?.notes || "")}</textarea>
-      </div>
-      <div class="form-footer field full">
-        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
-        <button class="button primary" type="submit">Guardar cliente</button>
-      </div>
-    </form>`,
-  );
+    </div>
+  `;
+}
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll(".nav-link").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === view);
+  });
+  render();
+  app.focus();
 }
 
 function render() {
+  if (loading) {
+    renderLoading();
+    return;
+  }
+
+  if (!session) {
+    renderAuth();
+    return;
+  }
+
   const titles = {
     dashboard: "Tablero Holeshot",
     leads: "Ventas y oportunidades",
@@ -504,9 +459,13 @@ function render() {
     tasks: "Seguimientos",
     clients: "Clientes",
     reports: "Reportes",
-    settings: "Datos",
+    settings: "Datos y Supabase",
   };
-  viewTitle.textContent = titles[currentView];
+
+  updateChrome(titles[currentView], true);
+  document.querySelectorAll(".nav-link").forEach((button) => {
+    button.classList.toggle("active", button.dataset.view === currentView);
+  });
 
   const views = {
     dashboard: renderDashboard,
@@ -934,34 +893,37 @@ function renderBars(items) {
 }
 
 function renderSettings() {
+  const email = session?.user?.email || "Usuario activo";
   return `
     <div class="toolbar">
       <div>
-        <h2>Datos del sistema</h2>
-        <p class="muted">Exporta, importa o reinicia la base local del CRM.</p>
+        <h2>Datos y Supabase</h2>
+        <p class="muted">Sesion: ${escapeHtml(email)}</p>
       </div>
       <div class="toolbar-actions">
+        <button class="button" data-action="reload-data">Sincronizar</button>
         <button class="button" data-action="export-json">Exportar JSON</button>
         <button class="button" data-action="import-json">Importar JSON</button>
       </div>
     </div>
     <div class="grid split-grid">
       <div class="card">
-        <div class="card-header"><h2>Informacion necesaria</h2></div>
+        <div class="card-header"><h2>Base oficial</h2></div>
         <div class="card-body">
-          <p class="muted">Para que el CRM sea usable, cada lead debe tener nombre, telefono, canal, interes, etapa, responsable, proxima accion y fecha de seguimiento.</p>
+          <p class="muted">Los datos se guardan en Supabase. Cada cambio crea o actualiza registros en la base de datos oficial.</p>
           <br />
-          <div class="notice">Esta primera version guarda la informacion en este navegador. Antes de cambiar de computadora o limpiar el navegador, usa Exportar JSON.</div>
+          <div class="notice">Antes de operar con clientes reales, ejecuta el archivo supabase-schema.sql en Supabase y crea los usuarios del equipo en Authentication.</div>
         </div>
       </div>
       <div class="card">
         <div class="card-header"><h2>Mantenimiento</h2></div>
         <div class="card-body">
-          <p class="muted">Puedes limpiar los datos de prueba cuando vayas a empezar con clientes reales.</p>
+          <p class="muted">Puedes cargar datos de prueba o limpiar las tablas si estas configurando el sistema.</p>
           <br />
           <div class="toolbar-actions">
             <button class="button warning" data-action="reset-demo">Cargar demo</button>
             <button class="button warning" data-action="clear-data">Vaciar CRM</button>
+            <button class="button" data-action="sign-out">Salir</button>
           </div>
         </div>
       </div>
@@ -969,11 +931,248 @@ function renderSettings() {
   `;
 }
 
-function saveLead(form) {
+function leadForm(recordId = "") {
+  const record = byId(state.opportunities, recordId);
+  const contact = record ? getContact(record.contactId) : {};
+  const title = record ? "Editar venta" : "Nuevo lead de venta";
+
+  openModal(
+    title,
+    `<form id="lead-form" class="form-grid">
+      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
+      <div class="field">
+        <label>Nombre del cliente *</label>
+        <input name="name" required value="${escapeHtml(contact.name || "")}" />
+      </div>
+      <div class="field">
+        <label>Telefono / WhatsApp *</label>
+        <input name="phone" required value="${escapeHtml(contact.phone || "")}" />
+      </div>
+      <div class="field">
+        <label>Canal de entrada *</label>
+        <select name="channel" required>${optionList(CHANNELS, contact.channel || "WhatsApp")}</select>
+      </div>
+      <div class="field">
+        <label>Tipo de cliente</label>
+        <select name="clientType">${optionList(["Nuevo", "Recurrente", "Referido", "Mayorista"], contact.type || "Nuevo")}</select>
+      </div>
+      <div class="field">
+        <label>Interes principal *</label>
+        <select name="interest" required>${optionList(INTERESTS, record?.interest || "Servicio")}</select>
+      </div>
+      <div class="field">
+        <label>Titulo de oportunidad *</label>
+        <input name="title" required value="${escapeHtml(record?.title || "")}" placeholder="Ej. Cotizacion casco, repuesto, moto..." />
+      </div>
+      <div class="field">
+        <label>Presupuesto estimado</label>
+        <input name="budget" type="number" min="0" value="${escapeHtml(record?.budget || "")}" />
+      </div>
+      <div class="field">
+        <label>Valor potencial</label>
+        <input name="value" type="number" min="0" value="${escapeHtml(record?.value || "")}" />
+      </div>
+      <div class="field">
+        <label>Urgencia</label>
+        <select name="urgency">${optionList(URGENCIES, record?.urgency || "Media")}</select>
+      </div>
+      <div class="field">
+        <label>Responsable</label>
+        <select name="owner">${optionList(OWNERS, record?.owner || "Ventas")}</select>
+      </div>
+      <div class="field">
+        <label>Etapa</label>
+        <select name="stage">${optionList(SALES_STAGES, record?.stage || "Nuevo lead")}</select>
+      </div>
+      <div class="field">
+        <label>Fecha de seguimiento *</label>
+        <input name="followUpDate" type="date" required value="${escapeHtml(record?.followUpDate || todayIso())}" />
+      </div>
+      <div class="field full">
+        <label>Proxima accion *</label>
+        <input name="nextAction" required value="${escapeHtml(record?.nextAction || "")}" placeholder="Ej. Llamar, mandar cotizacion, confirmar pago..." />
+      </div>
+      <div class="field full">
+        <label>Notas</label>
+        <textarea name="notes">${escapeHtml(record?.notes || contact.notes || "")}</textarea>
+      </div>
+      <div class="field full">
+        <label>Motivo de perdida</label>
+        <input name="lostReason" value="${escapeHtml(record?.lostReason || "")}" placeholder="Solo si la venta se marca como perdida" />
+      </div>
+      <div class="form-footer field full">
+        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
+        <button class="button primary" type="submit">Guardar venta</button>
+      </div>
+    </form>`,
+  );
+}
+
+function serviceForm(recordId = "") {
+  if (!state.contacts.length) {
+    clientForm();
+    alert("Primero crea un cliente para poder abrir un servicio.");
+    return;
+  }
+
+  const record = byId(state.services, recordId);
+  const contact = record ? getContact(record.contactId) : state.contacts[0] || {};
+
+  openModal(
+    record ? "Editar servicio" : "Nuevo servicio",
+    `<form id="service-form" class="form-grid">
+      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
+      <div class="field">
+        <label>Cliente existente *</label>
+        <select name="contactId" required>${contactOptions(record?.contactId || contact.id || "")}</select>
+      </div>
+      <div class="field">
+        <label>Responsable</label>
+        <select name="owner">${optionList(OWNERS, record?.owner || "Servicio")}</select>
+      </div>
+      <div class="field">
+        <label>Moto / producto</label>
+        <input name="asset" value="${escapeHtml(record?.asset || "")}" placeholder="Ej. Moto, casco, repuesto..." />
+      </div>
+      <div class="field">
+        <label>Valor cotizado</label>
+        <input name="quotedValue" type="number" min="0" value="${escapeHtml(record?.quotedValue || "")}" />
+      </div>
+      <div class="field">
+        <label>Etapa</label>
+        <select name="stage">${optionList(SERVICE_STAGES, record?.stage || "Solicitud recibida")}</select>
+      </div>
+      <div class="field">
+        <label>Fecha compromiso *</label>
+        <input name="dueDate" type="date" required value="${escapeHtml(record?.dueDate || todayIso())}" />
+      </div>
+      <div class="field full">
+        <label>Solicitud del cliente *</label>
+        <input name="request" required value="${escapeHtml(record?.request || "")}" />
+      </div>
+      <div class="field full">
+        <label>Notas de servicio</label>
+        <textarea name="notes">${escapeHtml(record?.notes || "")}</textarea>
+      </div>
+      <div class="form-footer field full">
+        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
+        <button class="button primary" type="submit">Guardar servicio</button>
+      </div>
+    </form>`,
+  );
+}
+
+function taskForm(recordId = "") {
+  const record = byId(state.tasks, recordId);
+  openModal(
+    record ? "Editar seguimiento" : "Nuevo seguimiento",
+    `<form id="task-form" class="form-grid">
+      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
+      <div class="field full">
+        <label>Accion pendiente *</label>
+        <input name="title" required value="${escapeHtml(record?.title || "")}" />
+      </div>
+      <div class="field">
+        <label>Fecha *</label>
+        <input name="dueDate" type="date" required value="${escapeHtml(record?.dueDate || todayIso())}" />
+      </div>
+      <div class="field">
+        <label>Responsable</label>
+        <select name="owner">${optionList(OWNERS, record?.owner || "Ventas")}</select>
+      </div>
+      <div class="field">
+        <label>Prioridad</label>
+        <select name="priority">${optionList(URGENCIES, record?.priority || "Media")}</select>
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select name="status">${optionList(["Pendiente", "Completada"], record?.status || "Pendiente")}</select>
+      </div>
+      <div class="form-footer field full">
+        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
+        <button class="button primary" type="submit">Guardar seguimiento</button>
+      </div>
+    </form>`,
+  );
+}
+
+function clientForm(recordId = "") {
+  const record = byId(state.contacts, recordId);
+  openModal(
+    record ? "Editar cliente" : "Nuevo cliente",
+    `<form id="client-form" class="form-grid">
+      <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
+      <div class="field">
+        <label>Nombre *</label>
+        <input name="name" required value="${escapeHtml(record?.name || "")}" />
+      </div>
+      <div class="field">
+        <label>Telefono / WhatsApp *</label>
+        <input name="phone" required value="${escapeHtml(record?.phone || "")}" />
+      </div>
+      <div class="field">
+        <label>Canal</label>
+        <select name="channel">${optionList(CHANNELS, record?.channel || "WhatsApp")}</select>
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <select name="type">${optionList(["Nuevo", "Recurrente", "Referido", "Mayorista"], record?.type || "Nuevo")}</select>
+      </div>
+      <div class="field">
+        <label>Ultimo contacto</label>
+        <input name="lastContact" type="date" value="${escapeHtml(record?.lastContact || todayIso())}" />
+      </div>
+      <div class="field full">
+        <label>Notas</label>
+        <textarea name="notes">${escapeHtml(record?.notes || "")}</textarea>
+      </div>
+      <div class="form-footer field full">
+        <button type="button" class="ghost-button" data-action="close-modal">Cancelar</button>
+        <button class="button primary" type="submit">Guardar cliente</button>
+      </div>
+    </form>`,
+  );
+}
+
+async function findOrCreateContact(data) {
+  const phone = data.phone?.trim();
+  const existing = state.contacts.find((item) => item.phone && item.phone === phone);
+  const payload = {
+    ...(existing ? { id: existing.id } : {}),
+    name: data.name.trim(),
+    phone,
+    channel: data.channel,
+    type: data.clientType || existing?.type || "Nuevo",
+    lastContact: todayIso(),
+    notes: data.contactNotes || data.notes || existing?.notes || "",
+  };
+
+  if (existing) {
+    const { data: updated, error } = await supabaseClient
+      .from("contacts")
+      .update(contactToDb(payload))
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return contactFromDb(updated);
+  }
+
+  const { data: created, error } = await supabaseClient
+    .from("contacts")
+    .insert(contactToDb(payload))
+    .select()
+    .single();
+  if (error) throw error;
+  return contactFromDb(created);
+}
+
+async function saveLead(form) {
   const data = getFormData(form);
-  const contact = findOrCreateContact(data);
+  const contact = await findOrCreateContact(data);
   const existing = byId(state.opportunities, data.id);
   const payload = {
+    ...(existing ? { id: existing.id } : {}),
     contactId: contact.id,
     title: data.title.trim(),
     interest: data.interest,
@@ -989,35 +1188,42 @@ function saveLead(form) {
   };
 
   if (existing) {
-    Object.assign(existing, payload);
+    const { error } = await supabaseClient
+      .from("opportunities")
+      .update(opportunityToDb(payload))
+      .eq("id", existing.id);
+    if (error) throw error;
   } else {
-    const opportunity = {
-      id: uid(),
-      createdAt: todayIso(),
-      ...payload,
-    };
-    state.opportunities.unshift(opportunity);
-    state.tasks.unshift({
-      id: uid(),
-      title: opportunity.nextAction,
-      dueDate: opportunity.followUpDate,
-      owner: opportunity.owner,
-      priority: opportunity.urgency,
-      status: "Pendiente",
-      relatedType: "opportunity",
-      relatedId: opportunity.id,
-    });
+    const { data: opportunity, error } = await supabaseClient
+      .from("opportunities")
+      .insert(opportunityToDb(payload))
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { error: taskError } = await supabaseClient.from("tasks").insert(
+      taskToDb({
+        title: payload.nextAction,
+        dueDate: payload.followUpDate,
+        owner: payload.owner,
+        priority: payload.urgency,
+        status: "Pendiente",
+        relatedType: "opportunity",
+        relatedId: opportunity.id,
+      }),
+    );
+    if (taskError) throw taskError;
   }
 
-  saveState();
   closeModal();
-  render();
+  await loadRemoteData();
 }
 
-function saveService(form) {
+async function saveService(form) {
   const data = getFormData(form);
   const existing = byId(state.services, data.id);
   const payload = {
+    ...(existing ? { id: existing.id } : {}),
     contactId: data.contactId,
     asset: data.asset.trim(),
     request: data.request.trim(),
@@ -1029,34 +1235,39 @@ function saveService(form) {
   };
 
   if (existing) {
-    Object.assign(existing, payload);
+    const { error } = await supabaseClient.from("services").update(serviceToDb(payload)).eq("id", existing.id);
+    if (error) throw error;
   } else {
-    const service = {
-      id: uid(),
-      ...payload,
-    };
-    state.services.unshift(service);
-    state.tasks.unshift({
-      id: uid(),
-      title: `Seguimiento servicio: ${service.request}`,
-      dueDate: service.dueDate,
-      owner: service.owner,
-      priority: "Media",
-      status: "Pendiente",
-      relatedType: "service",
-      relatedId: service.id,
-    });
+    const { data: service, error } = await supabaseClient
+      .from("services")
+      .insert(serviceToDb(payload))
+      .select()
+      .single();
+    if (error) throw error;
+
+    const { error: taskError } = await supabaseClient.from("tasks").insert(
+      taskToDb({
+        title: `Seguimiento servicio: ${payload.request}`,
+        dueDate: payload.dueDate,
+        owner: payload.owner,
+        priority: "Media",
+        status: "Pendiente",
+        relatedType: "service",
+        relatedId: service.id,
+      }),
+    );
+    if (taskError) throw taskError;
   }
 
-  saveState();
   closeModal();
-  render();
+  await loadRemoteData();
 }
 
-function saveTask(form) {
+async function saveTask(form) {
   const data = getFormData(form);
   const existing = byId(state.tasks, data.id);
   const payload = {
+    ...(existing ? { id: existing.id } : {}),
     title: data.title.trim(),
     dueDate: data.dueDate,
     owner: data.owner,
@@ -1067,20 +1278,22 @@ function saveTask(form) {
   };
 
   if (existing) {
-    Object.assign(existing, payload);
+    const { error } = await supabaseClient.from("tasks").update(taskToDb(payload)).eq("id", existing.id);
+    if (error) throw error;
   } else {
-    state.tasks.unshift({ id: uid(), ...payload });
+    const { error } = await supabaseClient.from("tasks").insert(taskToDb(payload));
+    if (error) throw error;
   }
 
-  saveState();
   closeModal();
-  render();
+  await loadRemoteData();
 }
 
-function saveClient(form) {
+async function saveClient(form) {
   const data = getFormData(form);
   const existing = byId(state.contacts, data.id);
   const payload = {
+    ...(existing ? { id: existing.id } : {}),
     name: data.name.trim(),
     phone: data.phone.trim(),
     channel: data.channel,
@@ -1090,48 +1303,156 @@ function saveClient(form) {
   };
 
   if (existing) {
-    Object.assign(existing, payload);
+    const { error } = await supabaseClient.from("contacts").update(contactToDb(payload)).eq("id", existing.id);
+    if (error) throw error;
   } else {
-    state.contacts.unshift({ id: uid(), ...payload });
+    const { error } = await supabaseClient.from("contacts").insert(contactToDb(payload));
+    if (error) throw error;
   }
 
-  saveState();
   closeModal();
-  render();
+  await loadRemoteData();
 }
 
-function addTaskFromOpportunity(id) {
+async function addTaskFromOpportunity(id) {
   const item = byId(state.opportunities, id);
   if (!item) return;
-  state.tasks.unshift({
-    id: uid(),
-    title: item.nextAction || `Seguimiento: ${item.title}`,
-    dueDate: item.followUpDate || todayIso(),
-    owner: item.owner,
-    priority: item.urgency,
-    status: "Pendiente",
-    relatedType: "opportunity",
-    relatedId: item.id,
-  });
-  saveState();
-  setView("tasks");
+  const { error } = await supabaseClient.from("tasks").insert(
+    taskToDb({
+      title: item.nextAction || `Seguimiento: ${item.title}`,
+      dueDate: item.followUpDate || todayIso(),
+      owner: item.owner,
+      priority: item.urgency,
+      status: "Pendiente",
+      relatedType: "opportunity",
+      relatedId: item.id,
+    }),
+  );
+  if (error) throw error;
+  currentView = "tasks";
+  await loadRemoteData();
 }
 
-function addTaskFromService(id) {
+async function addTaskFromService(id) {
   const item = byId(state.services, id);
   if (!item) return;
-  state.tasks.unshift({
+  const { error } = await supabaseClient.from("tasks").insert(
+    taskToDb({
+      title: `Seguimiento servicio: ${item.request}`,
+      dueDate: item.dueDate || todayIso(),
+      owner: item.owner,
+      priority: "Media",
+      status: "Pendiente",
+      relatedType: "service",
+      relatedId: item.id,
+    }),
+  );
+  if (error) throw error;
+  currentView = "tasks";
+  await loadRemoteData();
+}
+
+function demoState() {
+  const contactOne = {
     id: uid(),
-    title: `Seguimiento servicio: ${item.request}`,
-    dueDate: item.dueDate || todayIso(),
-    owner: item.owner,
-    priority: "Media",
-    status: "Pendiente",
-    relatedType: "service",
-    relatedId: item.id,
-  });
-  saveState();
-  setView("tasks");
+    name: "Cliente demo venta",
+    phone: "70000001",
+    channel: "Instagram",
+    type: "Nuevo",
+    lastContact: dateShift(-1),
+    notes: "Interesado en compra y accesorios.",
+  };
+  const contactTwo = {
+    id: uid(),
+    name: "Cliente demo servicio",
+    phone: "70000002",
+    channel: "WhatsApp",
+    type: "Recurrente",
+    lastContact: dateShift(-2),
+    notes: "Necesita seguimiento postservicio.",
+  };
+  const opportunity = {
+    id: uid(),
+    contactId: contactOne.id,
+    title: "Cotizacion inicial",
+    interest: "Accesorio",
+    budget: 450,
+    value: 520,
+    urgency: "Alta",
+    stage: "Cotizacion enviada",
+    owner: "Ventas",
+    nextAction: "Enviar alternativas y confirmar disponibilidad.",
+    followUpDate: dateShift(1),
+    notes: "Pregunto por opciones y forma de pago.",
+    lostReason: "",
+  };
+  const service = {
+    id: uid(),
+    contactId: contactTwo.id,
+    asset: "Moto cliente",
+    request: "Revision general y mantenimiento preventivo",
+    stage: "En proceso",
+    quotedValue: 280,
+    dueDate: dateShift(2),
+    owner: "Servicio",
+    notes: "Avisar apenas este lista para entrega.",
+  };
+
+  return {
+    contacts: [contactOne, contactTwo],
+    opportunities: [opportunity],
+    services: [service],
+    tasks: [
+      {
+        id: uid(),
+        title: "Seguimiento a cotizacion demo",
+        dueDate: dateShift(1),
+        owner: "Ventas",
+        priority: "Alta",
+        status: "Pendiente",
+        relatedType: "opportunity",
+        relatedId: opportunity.id,
+      },
+      {
+        id: uid(),
+        title: "Confirmar entrega de servicio demo",
+        dueDate: dateShift(2),
+        owner: "Servicio",
+        priority: "Media",
+        status: "Pendiente",
+        relatedType: "service",
+        relatedId: service.id,
+      },
+    ],
+  };
+}
+
+async function clearRemoteData() {
+  await supabaseClient.from("tasks").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await supabaseClient.from("services").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await supabaseClient.from("opportunities").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+  await supabaseClient.from("contacts").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+}
+
+async function insertState(nextState) {
+  if (nextState.contacts?.length) {
+    const { error } = await supabaseClient.from("contacts").upsert(nextState.contacts.map(contactToDb));
+    if (error) throw error;
+  }
+  if (nextState.opportunities?.length) {
+    const { error } = await supabaseClient
+      .from("opportunities")
+      .upsert(nextState.opportunities.map(opportunityToDb));
+    if (error) throw error;
+  }
+  if (nextState.services?.length) {
+    const { error } = await supabaseClient.from("services").upsert(nextState.services.map(serviceToDb));
+    if (error) throw error;
+  }
+  if (nextState.tasks?.length) {
+    const { error } = await supabaseClient.from("tasks").upsert(nextState.tasks.map(taskToDb));
+    if (error) throw error;
+  }
 }
 
 function download(filename, content, type) {
@@ -1184,73 +1505,125 @@ function exportCsv() {
   download(`holeshot-crm-${todayIso()}.csv`, csv, "text/csv");
 }
 
+async function runAction(action, id, target) {
+  try {
+    if (action === "close-modal") return closeModal();
+    if (action === "sign-out") {
+      await supabaseClient.auth.signOut();
+      return;
+    }
+    if (action === "reload-data") return safeLoad();
+    if (!session && action !== "sign-up") return renderAuth("Inicia sesion para usar el CRM.");
+
+    if (action === "new-lead") return leadForm();
+    if (action === "edit-lead") return leadForm(id);
+    if (action === "new-service") return serviceForm();
+    if (action === "edit-service") return serviceForm(id);
+    if (action === "new-task") return taskForm();
+    if (action === "edit-task") return taskForm(id);
+    if (action === "new-client") return clientForm();
+    if (action === "edit-client") return clientForm(id);
+    if (action === "add-task-from-opportunity") return addTaskFromOpportunity(id);
+    if (action === "add-task-from-service") return addTaskFromService(id);
+    if (action === "export-json") return exportJson();
+    if (action === "export-csv") return exportCsv();
+    if (action === "import-json") return importInput.click();
+    if (action === "sign-up") return signUpFromForm();
+
+    if (action === "reset-demo" && confirm("Esto agregara datos demo a Supabase. Continuar?")) {
+      await insertState(demoState());
+      return loadRemoteData();
+    }
+
+    if (action === "clear-data" && confirm("Esto borrara los datos del CRM en Supabase. Continuar?")) {
+      await clearRemoteData();
+      return loadRemoteData();
+    }
+  } catch (error) {
+    setSync("Error", "danger");
+    alert(friendlyError(error));
+    target?.removeAttribute("disabled");
+  }
+}
+
+async function signIn(form) {
+  const data = getFormData(form);
+  setSync("Entrando", "neutral");
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email: data.email,
+    password: data.password,
+  });
+  if (error) throw error;
+}
+
+async function signUpFromForm() {
+  const form = document.querySelector("#auth-form");
+  if (!form?.reportValidity()) return;
+  const data = getFormData(form);
+  setSync("Creando usuario", "neutral");
+  const { error } = await supabaseClient.auth.signUp({
+    email: data.email,
+    password: data.password,
+  });
+  if (error) throw error;
+  renderAuth("Usuario creado. Si Supabase pide confirmacion, revisa el correo antes de entrar.");
+}
+
 document.querySelectorAll(".nav-link").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
 searchInput.addEventListener("input", render);
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const target = event.target.closest("[data-action]");
   if (!target) return;
-
   const { action, id } = target.dataset;
-  if (action === "close-modal") closeModal();
-  if (action === "new-lead") leadForm();
-  if (action === "edit-lead") leadForm(id);
-  if (action === "new-service") serviceForm();
-  if (action === "edit-service") serviceForm(id);
-  if (action === "new-task") taskForm();
-  if (action === "edit-task") taskForm(id);
-  if (action === "new-client") clientForm();
-  if (action === "edit-client") clientForm(id);
-  if (action === "add-task-from-opportunity") addTaskFromOpportunity(id);
-  if (action === "add-task-from-service") addTaskFromService(id);
-  if (action === "export-json") exportJson();
-  if (action === "export-csv") exportCsv();
-  if (action === "import-json") importInput.click();
-  if (action === "reset-demo" && confirm("Esto reemplazara los datos actuales con datos demo. Continuar?")) {
-    state = createDemoRecords(seedState());
-    saveState();
-    render();
-  }
-  if (action === "clear-data" && confirm("Esto vaciara el CRM local. Continuar?")) {
-    state = seedState();
-    state.contacts = [];
-    saveState();
-    render();
-  }
+  await runAction(action, id, target);
 });
 
-document.addEventListener("submit", (event) => {
+document.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
-  if (form.id === "lead-form") saveLead(form);
-  if (form.id === "service-form") saveService(form);
-  if (form.id === "task-form") saveTask(form);
-  if (form.id === "client-form") saveClient(form);
+  try {
+    setSync("Guardando", "neutral");
+    if (form.id === "auth-form") await signIn(form);
+    if (form.id === "lead-form") await saveLead(form);
+    if (form.id === "service-form") await saveService(form);
+    if (form.id === "task-form") await saveTask(form);
+    if (form.id === "client-form") await saveClient(form);
+  } catch (error) {
+    setSync("Error", "danger");
+    alert(friendlyError(error));
+  }
 });
 
-document.addEventListener("change", (event) => {
-  const stageTarget = event.target.closest("[data-update-stage]");
-  if (stageTarget) {
-    const collection = stageTarget.dataset.updateStage === "service" ? state.services : state.opportunities;
-    const record = byId(collection, stageTarget.dataset.id);
-    if (record) {
-      record.stage = stageTarget.value;
-      saveState();
-      render();
+document.addEventListener("change", async (event) => {
+  try {
+    const stageTarget = event.target.closest("[data-update-stage]");
+    if (stageTarget) {
+      const table = stageTarget.dataset.updateStage === "service" ? "services" : "opportunities";
+      const { error } = await supabaseClient
+        .from(table)
+        .update({ stage: stageTarget.value })
+        .eq("id", stageTarget.dataset.id);
+      if (error) throw error;
+      await loadRemoteData();
     }
-  }
 
-  const taskTarget = event.target.closest("[data-complete-task]");
-  if (taskTarget) {
-    const task = byId(state.tasks, taskTarget.dataset.completeTask);
-    if (task) {
-      task.status = taskTarget.checked ? "Completada" : "Pendiente";
-      saveState();
-      render();
+    const taskTarget = event.target.closest("[data-complete-task]");
+    if (taskTarget) {
+      const status = taskTarget.checked ? "Completada" : "Pendiente";
+      const { error } = await supabaseClient
+        .from("tasks")
+        .update({ status })
+        .eq("id", taskTarget.dataset.completeTask);
+      if (error) throw error;
+      await loadRemoteData();
     }
+  } catch (error) {
+    setSync("Error", "danger");
+    alert(friendlyError(error));
   }
 });
 
@@ -1260,17 +1633,15 @@ importInput.addEventListener("change", async () => {
   try {
     const imported = JSON.parse(await file.text());
     if (!Array.isArray(imported.contacts)) throw new Error("Formato invalido");
-    state = {
+    await insertState({
       contacts: imported.contacts || [],
       opportunities: imported.opportunities || [],
       services: imported.services || [],
       tasks: imported.tasks || [],
-      settings: imported.settings || { owners: OWNERS, channels: CHANNELS, interests: INTERESTS },
-    };
-    saveState();
-    render();
-  } catch {
-    alert("No se pudo importar el archivo. Revisa que sea un JSON exportado desde este CRM.");
+    });
+    await loadRemoteData();
+  } catch (error) {
+    alert(`No se pudo importar el archivo. ${friendlyError(error)}`);
   } finally {
     importInput.value = "";
   }
@@ -1284,4 +1655,4 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !modal.hidden) closeModal();
 });
 
-render();
+init();

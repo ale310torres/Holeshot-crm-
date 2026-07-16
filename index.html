@@ -8,14 +8,14 @@
       content="CRM operativo para gestionar leads, clientes, servicios y seguimientos de Holeshot."
     />
     <title>Holeshot CRM</title>
-    <link rel="icon" type="image/png" href="./logo.png?v=3" />
-    <link rel="stylesheet" href="./styles.css?v=3" />
+    <link rel="icon" type="image/png" href="./logo.png?v=4" />
+    <link rel="stylesheet" href="./styles.css?v=4" />
   </head>
   <body>
     <div class="shell">
       <aside class="sidebar" aria-label="Navegacion principal">
         <div class="brand">
-          <img class="brand-logo" src="./logo.png?v=3" alt="Holeshot Power Parts" />
+          <img class="brand-logo" src="./logo.png?v=4" alt="Holeshot Power Parts" />
           <div>
             <strong>Holeshot</strong>
             <span>CRM operativo</span>
@@ -40,11 +40,13 @@
             <h1 id="view-title">Tablero Holeshot</h1>
           </div>
           <div class="topbar-actions">
+            <span id="sync-status" class="sync-status">Conectando</span>
             <label class="search">
               <span>Buscar</span>
               <input id="global-search" type="search" placeholder="Cliente, telefono, interes..." />
             </label>
-            <button class="button primary" data-action="new-lead">Nuevo lead</button>
+            <button id="new-lead-top" class="button primary" data-action="new-lead">Nuevo lead</button>
+            <button id="sign-out-button" class="button" data-action="sign-out" hidden>Salir</button>
           </div>
         </header>
 
@@ -63,6 +65,7 @@
     </div>
 
     <input id="import-file" type="file" accept="application/json" hidden />
-    <script src="./app.js?v=3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./app.js?v=4" defer></script>
   </body>
 </html>
