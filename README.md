@@ -1,4 +1,4 @@
-# Holeshot CRM
+﻿# Holeshot CRM
 
 Version independiente del CRM de Holeshot, lista para subir a GitHub, conectar con Vercel y guardar datos en Supabase.
 
@@ -33,7 +33,7 @@ Desde esta carpeta:
 ```powershell
 git init
 git branch -M main
-git add .gitignore README.md index.html styles.css app.js logo.png vercel.json supabase-schema.sql
+git add .gitignore README.md index.html styles.css app.js logo.png vercel.json supabase-schema.sql supabase-add-brand-model.sql
 git commit -m "Crear CRM Holeshot"
 git remote add origin https://github.com/TU_USUARIO/holeshot-crm.git
 git push -u origin main
@@ -55,6 +55,10 @@ No hace falta instalar dependencias ni correr build.
 1. Entra al proyecto Supabase.
 2. Abre SQL Editor.
 3. Pega y ejecuta el contenido de `supabase-schema.sql`.
+4. Si ya tenias la base creada, ejecuta tambien `supabase-add-brand-model.sql` para agregar marca y modelo.
 4. Ve a Authentication.
 5. Crea los usuarios que podran entrar al CRM.
 6. Publica el proyecto en Vercel.
+
+
+

@@ -1,4 +1,4 @@
-const SUPABASE_URL = "https://esjqybxzpqtonkcomdtb.supabase.co";
+﻿const SUPABASE_URL = "https://esjqybxzpqtonkcomdtb.supabase.co";
 const SUPABASE_ANON_KEY =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzanF5Ynh6cHF0b25rY29tZHRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxNTE2NTgsImV4cCI6MjA5OTcyNzY1OH0.DEGP5xyOsdl41qFiFaoZfophSKiWdXIcKmq7_wv9nbg";
 
@@ -208,6 +208,8 @@ function opportunityFromDb(row) {
     contactId: row.contact_id,
     title: row.title || "",
     interest: row.interest || "",
+    brand: row.brand || "",
+    model: row.model || "",
     budget: Number(row.budget || 0),
     value: Number(row.value || 0),
     urgency: row.urgency || "Media",
@@ -227,6 +229,8 @@ function opportunityToDb(item) {
     contact_id: item.contactId,
     title: item.title,
     interest: item.interest || null,
+    brand: item.brand || null,
+    model: item.model || null,
     budget: Number(item.budget || 0),
     value: Number(item.value || 0),
     urgency: item.urgency || null,
@@ -375,6 +379,9 @@ function friendlyError(error) {
   const message = error?.message || String(error);
   if (message.includes("relation") && message.includes("does not exist")) {
     return "Faltan tablas en Supabase. Ejecuta el archivo supabase-schema.sql en el SQL Editor.";
+  }
+  if (message.includes("Could not find") && (message.includes("brand") || message.includes("model"))) {
+    return "Faltan los campos marca/modelo en Supabase. Ejecuta supabase-add-brand-model.sql en el SQL Editor.";
   }
   if (message.includes("row-level security") || message.includes("policy")) {
     return "Supabase bloqueo la accion por reglas de seguridad. Revisa que hayas ejecutado supabase-schema.sql y que hayas iniciado sesion.";
@@ -553,7 +560,7 @@ function renderStage(stage) {
                 const contact = getContact(item.contactId);
                 return `<div class="mini-card">
                   <strong>${escapeHtml(contact.name)}</strong>
-                  <span>${escapeHtml(item.title)} · ${money(item.value)}</span>
+                  <span>${escapeHtml(item.title)} Â· ${money(item.value)}</span>
                 </div>`;
               })
               .join("")
@@ -573,7 +580,7 @@ function renderTaskList(tasks) {
             <input type="checkbox" ${task.status === "Completada" ? "checked" : ""} data-complete-task="${task.id}" aria-label="Marcar seguimiento" />
             <div>
               <strong>${escapeHtml(task.title)}</strong>
-              <p class="muted">${dateLabel(task.dueDate)} · ${escapeHtml(task.owner)}</p>
+              <p class="muted">${dateLabel(task.dueDate)} Â· ${escapeHtml(task.owner)}</p>
             </div>
             <div class="actions">
               ${taskBadge(task)}
@@ -600,7 +607,7 @@ function renderServiceMini(services) {
       const contact = getContact(service.contactId);
       return `<div class="mini-card">
         <strong>${escapeHtml(contact.name)}</strong>
-        <span>${escapeHtml(service.request)} · ${escapeHtml(service.stage)}</span>
+        <span>${escapeHtml(service.request)} Â· ${escapeHtml(service.stage)}</span>
       </div>`;
     })
     .join("");
@@ -609,7 +616,7 @@ function renderServiceMini(services) {
 function renderLeads() {
   const rows = state.opportunities.filter((item) => {
     const contact = getContact(item.contactId);
-    return matchesSearch(contact.name, contact.phone, item.title, item.interest, item.stage, item.owner);
+    return matchesSearch(contact.name, contact.phone, item.title, item.interest, item.brand, item.model, item.stage, item.owner);
   });
 
   return `
@@ -654,11 +661,11 @@ function renderLeadRow(item) {
     <tr>
       <td>
         <div class="row-title">${escapeHtml(contact.name)}</div>
-        <div class="row-note">${escapeHtml(contact.phone)} · ${escapeHtml(contact.channel)}</div>
+        <div class="row-note">${escapeHtml(contact.phone)} Â· ${escapeHtml(contact.channel)}</div>
       </td>
       <td>
         <div class="row-title">${escapeHtml(item.title)}</div>
-        <div class="row-note">${escapeHtml(item.interest)} · Urgencia ${escapeHtml(item.urgency)}</div>
+        <div class="row-note">${[item.interest, item.brand, item.model].filter(Boolean).map(escapeHtml).join(" · ") || "Sin detalle"} · Urgencia ${escapeHtml(item.urgency)}</div>
       </td>
       <td>${money(item.value)}</td>
       <td>
@@ -848,7 +855,7 @@ function renderReports() {
       <div class="card metric">
         <span>Conversion</span>
         <strong>${Math.round((won / total) * 100)}%</strong>
-        <small>${won} ganadas · ${lost} perdidas · ${open} abiertas</small>
+        <small>${won} ganadas Â· ${lost} perdidas Â· ${open} abiertas</small>
       </div>
       <div class="card metric">
         <span>Venta potencial abierta</span>
@@ -961,8 +968,16 @@ function leadForm(recordId = "") {
         <select name="interest" required>${optionList(INTERESTS, record?.interest || "Servicio")}</select>
       </div>
       <div class="field">
-        <label>Titulo de oportunidad *</label>
-        <input name="title" required value="${escapeHtml(record?.title || "")}" placeholder="Ej. Cotizacion casco, repuesto, moto..." />
+        <label>Titulo de oportunidad</label>
+        <input name="title" value="${escapeHtml(record?.title || "")}" placeholder="Ej. Cotizacion casco, repuesto, moto..." />
+      </div>
+      <div class="field">
+        <label>Marca</label>
+        <input name="brand" value="${escapeHtml(record?.brand || "")}" placeholder="Ej. Honda, Yamaha, KTM..." />
+      </div>
+      <div class="field">
+        <label>Modelo</label>
+        <input name="model" value="${escapeHtml(record?.model || "")}" placeholder="Ej. CRF 250, YZ 125..." />
       </div>
       <div class="field">
         <label>Presupuesto estimado</label>
@@ -989,8 +1004,8 @@ function leadForm(recordId = "") {
         <input name="followUpDate" type="date" required value="${escapeHtml(record?.followUpDate || todayIso())}" />
       </div>
       <div class="field full">
-        <label>Proxima accion *</label>
-        <input name="nextAction" required value="${escapeHtml(record?.nextAction || "")}" placeholder="Ej. Llamar, mandar cotizacion, confirmar pago..." />
+        <label>Proxima accion</label>
+        <input name="nextAction" value="${escapeHtml(record?.nextAction || "")}" placeholder="Ej. Llamar, mandar cotizacion, confirmar pago..." />
       </div>
       <div class="field full">
         <label>Notas</label>
@@ -1174,14 +1189,16 @@ async function saveLead(form) {
   const payload = {
     ...(existing ? { id: existing.id } : {}),
     contactId: contact.id,
-    title: data.title.trim(),
+    title: data.title.trim() || [data.interest, data.brand, data.model].filter(Boolean).join(" - ") || "Nuevo lead Holeshot",
     interest: data.interest,
+    brand: (data.brand || "").trim(),
+    model: (data.model || "").trim(),
     budget: Number(data.budget || 0),
     value: Number(data.value || 0),
     urgency: data.urgency,
     stage: data.stage,
     owner: data.owner,
-    nextAction: data.nextAction.trim(),
+    nextAction: data.nextAction.trim() || "Dar seguimiento al cliente",
     followUpDate: data.followUpDate,
     notes: data.notes.trim(),
     lostReason: data.lostReason.trim(),
@@ -1191,7 +1208,9 @@ async function saveLead(form) {
     const { error } = await supabaseClient
       .from("opportunities")
       .update(opportunityToDb(payload))
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .select()
+      .single();
     if (error) throw error;
   } else {
     const { data: opportunity, error } = await supabaseClient
@@ -1585,7 +1604,14 @@ document.addEventListener("click", async (event) => {
 document.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
+  const submitButton = form.querySelector('button[type="submit"]');
+  const originalText = submitButton?.textContent;
+
   try {
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Guardando...";
+    }
     setSync("Guardando", "neutral");
     if (form.id === "auth-form") await signIn(form);
     if (form.id === "lead-form") await saveLead(form);
@@ -1595,6 +1621,11 @@ document.addEventListener("submit", async (event) => {
   } catch (error) {
     setSync("Error", "danger");
     alert(friendlyError(error));
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
   }
 });
 
@@ -1656,3 +1687,6 @@ document.addEventListener("keydown", (event) => {
 });
 
 init();
+
+
+

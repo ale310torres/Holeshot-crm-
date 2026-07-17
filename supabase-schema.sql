@@ -1,4 +1,4 @@
-create extension if not exists pgcrypto;
+﻿create extension if not exists pgcrypto;
 
 create table if not exists contacts (
   id uuid primary key default gen_random_uuid(),
@@ -16,6 +16,8 @@ create table if not exists opportunities (
   contact_id uuid references contacts(id) on delete cascade,
   title text not null,
   interest text,
+  brand text,
+  model text,
   budget numeric default 0,
   value numeric default 0,
   urgency text,
@@ -52,6 +54,9 @@ create table if not exists tasks (
   related_id uuid,
   created_at timestamptz default now()
 );
+
+alter table opportunities add column if not exists brand text;
+alter table opportunities add column if not exists model text;
 
 create index if not exists opportunities_contact_id_idx on opportunities(contact_id);
 create index if not exists services_contact_id_idx on services(contact_id);
@@ -94,3 +99,5 @@ for all
 to authenticated
 using (true)
 with check (true);
+
+
