@@ -303,6 +303,16 @@ function requireSupabase() {
   }
 }
 
+async function requireActiveSession() {
+  requireSupabase();
+  const { data, error } = await supabaseClient.auth.getSession();
+  if (error) throw error;
+  session = data.session;
+  if (!session?.access_token) {
+    throw new Error("La sesion de Supabase expiro. Cierra sesion, entra de nuevo y vuelve a guardar.");
+  }
+}
+
 async function loadRemoteData() {
   requireSupabase();
   loading = true;
@@ -376,7 +386,7 @@ async function safeLoad() {
 }
 
 function friendlyError(error) {
-  const message = error?.message || String(error);
+  const message = error?.message || error?.details || String(error);
   if (message.includes("relation") && message.includes("does not exist")) {
     return "Faltan tablas en Supabase. Ejecuta el archivo supabase-schema.sql en el SQL Editor.";
   }
@@ -389,6 +399,11 @@ function friendlyError(error) {
   return message;
 }
 
+function errorDetail(error) {
+  if (!error) return "Sin detalle tecnico.";
+  return [error.message, error.details, error.hint, error.code].filter(Boolean).join(" | ") || String(error);
+}
+
 function renderAuth(message = "") {
   updateChrome("Acceso Holeshot", false);
   document.querySelectorAll(".nav-link").forEach((button) => button.classList.remove("active"));
@@ -396,7 +411,7 @@ function renderAuth(message = "") {
     <section class="auth-wrap">
       <div class="auth-card card">
         <div class="auth-logo-wrap">
-          <img src="./logo.png?v=4" alt="Holeshot Power Parts" />
+          <img src="./logo.png?v=6" alt="Holeshot Power Parts" />
         </div>
         <h2>Entrar al CRM</h2>
         <p class="muted">Usa el usuario creado en Supabase para guardar ventas, clientes y servicios en la nube.</p>
@@ -1150,7 +1165,11 @@ function clientForm(recordId = "") {
 }
 
 async function findOrCreateContact(data) {
+  await requireActiveSession();
   const phone = data.phone?.trim();
+  if (!data.name?.trim()) throw new Error("Falta el nombre del cliente.");
+  if (!phone) throw new Error("Falta el telefono o WhatsApp del cliente.");
+
   const existing = state.contacts.find((item) => item.phone && item.phone === phone);
   const payload = {
     ...(existing ? { id: existing.id } : {}),
@@ -1183,6 +1202,7 @@ async function findOrCreateContact(data) {
 }
 
 async function saveLead(form) {
+  await requireActiveSession();
   const data = getFormData(form);
   const contact = await findOrCreateContact(data);
   const existing = byId(state.opportunities, data.id);
@@ -1205,13 +1225,14 @@ async function saveLead(form) {
   };
 
   if (existing) {
-    const { error } = await supabaseClient
+    const { data: updatedOpportunity, error } = await supabaseClient
       .from("opportunities")
       .update(opportunityToDb(payload))
       .eq("id", existing.id)
       .select()
       .single();
     if (error) throw error;
+    if (!updatedOpportunity?.id) throw new Error("Supabase no devolvio la venta actualizada.");
   } else {
     const { data: opportunity, error } = await supabaseClient
       .from("opportunities")
@@ -1219,6 +1240,7 @@ async function saveLead(form) {
       .select()
       .single();
     if (error) throw error;
+    if (!opportunity?.id) throw new Error("Supabase no devolvio la venta creada.");
 
     const { error: taskError } = await supabaseClient.from("tasks").insert(
       taskToDb({
@@ -1236,9 +1258,11 @@ async function saveLead(form) {
 
   closeModal();
   await loadRemoteData();
+  setSync("Venta guardada", "success");
 }
 
 async function saveService(form) {
+  await requireActiveSession();
   const data = getFormData(form);
   const existing = byId(state.services, data.id);
   const payload = {
@@ -1283,6 +1307,7 @@ async function saveService(form) {
 }
 
 async function saveTask(form) {
+  await requireActiveSession();
   const data = getFormData(form);
   const existing = byId(state.tasks, data.id);
   const payload = {
@@ -1309,6 +1334,7 @@ async function saveTask(form) {
 }
 
 async function saveClient(form) {
+  await requireActiveSession();
   const data = getFormData(form);
   const existing = byId(state.contacts, data.id);
   const payload = {
@@ -1559,8 +1585,11 @@ async function runAction(action, id, target) {
       return loadRemoteData();
     }
   } catch (error) {
+    console.error("Holeshot CRM action error", error);
     setSync("Error", "danger");
-    alert(friendlyError(error));
+    const message = friendlyError(error);
+    const detail = errorDetail(error);
+    alert(detail && detail !== message ? `${message}\n\nDetalle tecnico: ${detail}` : message);
     target?.removeAttribute("disabled");
   }
 }
@@ -1619,8 +1648,11 @@ document.addEventListener("submit", async (event) => {
     if (form.id === "task-form") await saveTask(form);
     if (form.id === "client-form") await saveClient(form);
   } catch (error) {
-    setSync("Error", "danger");
-    alert(friendlyError(error));
+    console.error("Holeshot CRM submit error", error);
+    setSync("Error al guardar", "danger");
+    const message = friendlyError(error);
+    const detail = errorDetail(error);
+    alert(detail && detail !== message ? `${message}\n\nDetalle tecnico: ${detail}` : message);
   } finally {
     if (submitButton) {
       submitButton.disabled = false;
@@ -1633,6 +1665,7 @@ document.addEventListener("change", async (event) => {
   try {
     const stageTarget = event.target.closest("[data-update-stage]");
     if (stageTarget) {
+      await requireActiveSession();
       const table = stageTarget.dataset.updateStage === "service" ? "services" : "opportunities";
       const { error } = await supabaseClient
         .from(table)
@@ -1644,6 +1677,7 @@ document.addEventListener("change", async (event) => {
 
     const taskTarget = event.target.closest("[data-complete-task]");
     if (taskTarget) {
+      await requireActiveSession();
       const status = taskTarget.checked ? "Completada" : "Pendiente";
       const { error } = await supabaseClient
         .from("tasks")
@@ -1653,8 +1687,11 @@ document.addEventListener("change", async (event) => {
       await loadRemoteData();
     }
   } catch (error) {
-    setSync("Error", "danger");
-    alert(friendlyError(error));
+    console.error("Holeshot CRM update error", error);
+    setSync("Error al actualizar", "danger");
+    const message = friendlyError(error);
+    const detail = errorDetail(error);
+    alert(detail && detail !== message ? `${message}\n\nDetalle tecnico: ${detail}` : message);
   }
 });
 
