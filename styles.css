@@ -567,6 +567,33 @@ textarea {
   padding: 12px;
 }
 
+.notice[data-tone="neutral"] {
+  border-color: #b8c7d9;
+  background: #f1f6fb;
+  color: #1f3f5b;
+}
+
+.notice[data-tone="success"] {
+  border-color: #b7dfc6;
+  background: #edf9f1;
+  color: #185c2f;
+}
+
+.notice[data-tone="danger"] {
+  border-color: #f3b7b7;
+  background: #fff1f1;
+  color: #8a1f1f;
+}
+
+.form-message[hidden] {
+  display: none;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .auth-wrap {
   min-height: calc(100vh - 150px);
   display: grid;

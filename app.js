@@ -178,6 +178,44 @@ function getFormData(form) {
   return Object.fromEntries(new FormData(form).entries());
 }
 
+function formFieldLabel(field) {
+  const label = field.closest(".field")?.querySelector("label")?.textContent || field.name || "campo requerido";
+  return label.replace("*", "").trim();
+}
+
+function showFormMessage(form, message, tone = "neutral") {
+  let notice = form.querySelector("[data-form-message]");
+  if (!notice) {
+    notice = document.createElement("div");
+    notice.className = "notice form-message field full";
+    notice.dataset.formMessage = "";
+    const footer = form.querySelector(".form-footer");
+    form.insertBefore(notice, footer || null);
+  }
+  notice.textContent = message;
+  notice.dataset.tone = tone;
+  notice.setAttribute("role", tone === "danger" ? "alert" : "status");
+  notice.hidden = false;
+}
+
+function clearFormMessage(form) {
+  const notice = form.querySelector("[data-form-message]");
+  if (notice) {
+    notice.hidden = true;
+    notice.textContent = "";
+  }
+}
+
+function validateRequiredFields(form) {
+  const missing = [...form.querySelectorAll("[required]")].find((field) => !String(field.value || "").trim());
+  if (!missing) return true;
+  const label = formFieldLabel(missing);
+  showFormMessage(form, `Falta completar: ${label}.`, "danger");
+  setSync("Faltan datos", "warning");
+  missing.focus();
+  return false;
+}
+
 function contactFromDb(row) {
   return {
     id: row.id,
@@ -411,7 +449,7 @@ function renderAuth(message = "") {
     <section class="auth-wrap">
       <div class="auth-card card">
         <div class="auth-logo-wrap">
-          <img src="./logo.png?v=6" alt="Holeshot Power Parts" />
+          <img src="./logo.png?v=7" alt="Holeshot Power Parts" />
         </div>
         <h2>Entrar al CRM</h2>
         <p class="muted">Usa el usuario creado en Supabase para guardar ventas, clientes y servicios en la nube.</p>
@@ -960,8 +998,9 @@ function leadForm(recordId = "") {
 
   openModal(
     title,
-    `<form id="lead-form" class="form-grid">
+    `<form id="lead-form" class="form-grid" novalidate>
       <input type="hidden" name="id" value="${escapeHtml(record?.id || "")}" />
+      <div class="notice form-message field full" data-form-message hidden></div>
       <div class="field">
         <label>Nombre del cliente *</label>
         <input name="name" required value="${escapeHtml(contact.name || "")}" />
@@ -1630,11 +1669,24 @@ document.addEventListener("click", async (event) => {
   await runAction(action, id, target);
 });
 
+document.addEventListener("click", (event) => {
+  const submitButton = event.target.closest('button[type="submit"]');
+  const form = submitButton?.closest("form");
+  if (form?.id === "lead-form") {
+    showFormMessage(form, "Revisando datos de la venta...", "neutral");
+    setSync("Revisando venta", "neutral");
+  }
+});
+
 document.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.target;
+  if (!form?.matches("form")) return;
   const submitButton = form.querySelector('button[type="submit"]');
   const originalText = submitButton?.textContent;
+  clearFormMessage(form);
+
+  if (!validateRequiredFields(form)) return;
 
   try {
     if (submitButton) {
@@ -1642,6 +1694,7 @@ document.addEventListener("submit", async (event) => {
       submitButton.textContent = "Guardando...";
     }
     setSync("Guardando", "neutral");
+    showFormMessage(form, "Guardando en Supabase...", "neutral");
     if (form.id === "auth-form") await signIn(form);
     if (form.id === "lead-form") await saveLead(form);
     if (form.id === "service-form") await saveService(form);
@@ -1652,6 +1705,7 @@ document.addEventListener("submit", async (event) => {
     setSync("Error al guardar", "danger");
     const message = friendlyError(error);
     const detail = errorDetail(error);
+    showFormMessage(form, detail && detail !== message ? `${message} Detalle tecnico: ${detail}` : message, "danger");
     alert(detail && detail !== message ? `${message}\n\nDetalle tecnico: ${detail}` : message);
   } finally {
     if (submitButton) {
