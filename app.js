@@ -110,6 +110,15 @@ function byId(collection, id) {
   return collection.find((item) => item.id === id);
 }
 
+function upsertStateItem(collection, item) {
+  const index = collection.findIndex((current) => current.id === item.id);
+  if (index >= 0) {
+    collection[index] = item;
+  } else {
+    collection.unshift(item);
+  }
+}
+
 function getContact(id) {
   return byId(state.contacts, id) || {
     id: "",
@@ -214,6 +223,26 @@ function validateRequiredFields(form) {
   setSync("Faltan datos", "warning");
   missing.focus();
   return false;
+}
+
+function setSaveStep(form, message) {
+  if (form) showFormMessage(form, message, "neutral");
+  setSync(message.replace("...", ""), "neutral");
+}
+
+async function withTimeout(operation, label, ms = 20000) {
+  let timerId;
+  const timeout = new Promise((_, reject) => {
+    timerId = setTimeout(() => {
+      reject(new Error(`${label} tardo demasiado. Revisa internet, Supabase o vuelve a intentar.`));
+    }, ms);
+  });
+
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    clearTimeout(timerId);
+  }
 }
 
 function contactFromDb(row) {
@@ -343,7 +372,7 @@ function requireSupabase() {
 
 async function requireActiveSession() {
   requireSupabase();
-  const { data, error } = await supabaseClient.auth.getSession();
+  const { data, error } = await withTimeout(supabaseClient.auth.getSession(), "Verificar sesion");
   if (error) throw error;
   session = data.session;
   if (!session?.access_token) {
@@ -449,7 +478,7 @@ function renderAuth(message = "") {
     <section class="auth-wrap">
       <div class="auth-card card">
         <div class="auth-logo-wrap">
-          <img src="./logo.png?v=7" alt="Holeshot Power Parts" />
+          <img src="./logo.png?v=9" alt="Holeshot Power Parts" />
         </div>
         <h2>Entrar al CRM</h2>
         <p class="muted">Usa el usuario creado en Supabase para guardar ventas, clientes y servicios en la nube.</p>
@@ -1203,7 +1232,8 @@ function clientForm(recordId = "") {
   );
 }
 
-async function findOrCreateContact(data) {
+async function findOrCreateContact(data, form) {
+  setSaveStep(form, "Guardando cliente...");
   await requireActiveSession();
   const phone = data.phone?.trim();
   if (!data.name?.trim()) throw new Error("Falta el nombre del cliente.");
@@ -1221,29 +1251,27 @@ async function findOrCreateContact(data) {
   };
 
   if (existing) {
-    const { data: updated, error } = await supabaseClient
-      .from("contacts")
-      .update(contactToDb(payload))
-      .eq("id", existing.id)
-      .select()
-      .single();
+    const { data: updated, error } = await withTimeout(
+      supabaseClient.from("contacts").update(contactToDb(payload)).eq("id", existing.id).select().single(),
+      "Actualizar cliente",
+    );
     if (error) throw error;
     return contactFromDb(updated);
   }
 
-  const { data: created, error } = await supabaseClient
-    .from("contacts")
-    .insert(contactToDb(payload))
-    .select()
-    .single();
+  const { data: created, error } = await withTimeout(
+    supabaseClient.from("contacts").insert(contactToDb(payload)).select().single(),
+    "Crear cliente",
+  );
   if (error) throw error;
   return contactFromDb(created);
 }
 
 async function saveLead(form) {
+  setSaveStep(form, "Verificando sesion...");
   await requireActiveSession();
   const data = getFormData(form);
-  const contact = await findOrCreateContact(data);
+  const contact = await findOrCreateContact(data, form);
   const existing = byId(state.opportunities, data.id);
   const payload = {
     ...(existing ? { id: existing.id } : {}),
@@ -1263,41 +1291,59 @@ async function saveLead(form) {
     lostReason: data.lostReason.trim(),
   };
 
+  let savedOpportunity;
   if (existing) {
-    const { data: updatedOpportunity, error } = await supabaseClient
-      .from("opportunities")
-      .update(opportunityToDb(payload))
-      .eq("id", existing.id)
-      .select()
-      .single();
+    setSaveStep(form, "Actualizando venta...");
+    const { data: updatedOpportunity, error } = await withTimeout(
+      supabaseClient.from("opportunities").update(opportunityToDb(payload)).eq("id", existing.id).select().single(),
+      "Actualizar venta",
+    );
     if (error) throw error;
     if (!updatedOpportunity?.id) throw new Error("Supabase no devolvio la venta actualizada.");
+    savedOpportunity = opportunityFromDb(updatedOpportunity);
   } else {
-    const { data: opportunity, error } = await supabaseClient
-      .from("opportunities")
-      .insert(opportunityToDb(payload))
-      .select()
-      .single();
+    setSaveStep(form, "Creando venta...");
+    const { data: opportunity, error } = await withTimeout(
+      supabaseClient.from("opportunities").insert(opportunityToDb(payload)).select().single(),
+      "Crear venta",
+    );
     if (error) throw error;
     if (!opportunity?.id) throw new Error("Supabase no devolvio la venta creada.");
+    savedOpportunity = opportunityFromDb(opportunity);
 
-    const { error: taskError } = await supabaseClient.from("tasks").insert(
-      taskToDb({
-        title: payload.nextAction,
-        dueDate: payload.followUpDate,
-        owner: payload.owner,
-        priority: payload.urgency,
-        status: "Pendiente",
-        relatedType: "opportunity",
-        relatedId: opportunity.id,
-      }),
-    );
-    if (taskError) throw taskError;
+    try {
+      setSaveStep(form, "Creando seguimiento...");
+      const { data: task, error: taskError } = await withTimeout(
+        supabaseClient
+          .from("tasks")
+          .insert(
+            taskToDb({
+              title: payload.nextAction,
+              dueDate: payload.followUpDate,
+              owner: payload.owner,
+              priority: payload.urgency,
+              status: "Pendiente",
+              relatedType: "opportunity",
+              relatedId: opportunity.id,
+            }),
+          )
+          .select()
+          .single(),
+        "Crear seguimiento",
+      );
+      if (taskError) throw taskError;
+      if (task?.id) upsertStateItem(state.tasks, taskFromDb(task));
+    } catch (taskError) {
+      console.warn("La venta se guardo, pero no se pudo crear el seguimiento.", taskError);
+    }
   }
 
+  upsertStateItem(state.contacts, contact);
+  upsertStateItem(state.opportunities, savedOpportunity);
+  currentView = "leads";
   closeModal();
-  await loadRemoteData();
   setSync("Venta guardada", "success");
+  render();
 }
 
 async function saveService(form) {
