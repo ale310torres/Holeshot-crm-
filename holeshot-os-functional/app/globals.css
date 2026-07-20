@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+
+@layer base {
+  * { @apply border-zinc-800; }
+  body { @apply bg-[#090909] text-zinc-100 antialiased; }
+  input, select, textarea {
+    @apply w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-zinc-600 focus:border-racing-500 focus:ring-2 focus:ring-racing-500/15;
+  }
+  textarea { @apply min-h-24 resize-y; }
+  label { @apply mb-1.5 block text-xs font-medium uppercase tracking-wider text-zinc-500; }
+}
+
+@layer components {
+  .panel { @apply rounded-xl border border-zinc-800/80 bg-zinc-900/55 shadow-glow; }
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-racing-500 text-white hover:bg-racing-400; }
+  .btn-secondary { @apply btn border border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-zinc-600 hover:bg-zinc-800; }
+  .table-wrap { @apply overflow-x-auto rounded-xl border border-zinc-800; }
+  .data-table { @apply min-w-full divide-y divide-zinc-800 text-left text-sm; }
+  .data-table th { @apply bg-zinc-950/80 px-4 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-500; }
+  .data-table td { @apply px-4 py-3 text-zinc-300; }
+  .data-table tbody { @apply divide-y divide-zinc-800/70; }
+  .data-table tbody tr { @apply transition hover:bg-zinc-800/35; }
+}
