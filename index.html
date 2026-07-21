@@ -1,73 +1,13 @@
 <!doctype html>
 <html lang="es">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="CRM operativo para gestionar leads, clientes, servicios y seguimientos de Holeshot."
-    />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="CRM operativo para ventas, clientes y seguimiento de Holeshot." />
     <title>Holeshot CRM</title>
-    <link rel="icon" type="image/png" href="./logo.png?v=15" />
-    <link rel="stylesheet" href="./styles.css?v=15" />
   </head>
   <body>
-    <div class="shell">
-      <aside class="sidebar" aria-label="Navegacion principal">
-        <div class="brand">
-          <img class="brand-logo" src="./logo.png?v=15" alt="Holeshot Power Parts" />
-          <div>
-            <strong>Holeshot</strong>
-            <span>CRM operativo</span>
-          </div>
-        </div>
-
-        <nav class="nav-list">
-          <button class="nav-link active" data-view="dashboard">Tablero</button>
-          <button class="nav-link" data-view="leads">Ventas</button>
-          <button class="nav-link" data-view="services">Servicios</button>
-          <button class="nav-link" data-view="tasks">Seguimientos</button>
-          <button class="nav-link" data-view="clients">Clientes</button>
-          <button class="nav-link" data-view="reports">Reportes</button>
-          <button class="nav-link" data-view="settings">Datos</button>
-        </nav>
-      </aside>
-
-      <div class="workspace">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Sistema independiente</p>
-            <h1 id="view-title">Tablero Holeshot</h1>
-          </div>
-          <div class="topbar-actions">
-            <span id="sync-status" class="sync-status">Conectando</span>
-            <label class="search">
-              <span>Buscar</span>
-              <input id="global-search" type="search" placeholder="Cliente, telefono, interes..." />
-            </label>
-            <button id="new-lead-top" class="button primary" data-action="new-lead">Nuevo lead</button>
-            <button id="sign-out-button" class="button" data-action="sign-out" hidden>Salir</button>
-          </div>
-        </header>
-
-        <main id="app" class="content" tabindex="-1"></main>
-      </div>
-    </div>
-
-    <div id="modal" class="modal" hidden>
-      <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <div class="modal-header">
-          <h2 id="modal-title"></h2>
-          <button class="icon-button" data-action="close-modal" aria-label="Cerrar">x</button>
-        </div>
-        <div id="modal-body"></div>
-      </div>
-    </div>
-
-    <input id="import-file" type="file" accept="application/json" hidden />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-timeout-v15.js" defer></script>
-    <script src="./app.js?v=15" defer></script>
-    <script src="./holeshot-lead-save-v15.js" defer></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

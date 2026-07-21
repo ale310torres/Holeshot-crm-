@@ -1,0 +1,279 @@
+{
+  "name": "Holeshot CRM - Facebook/Zapier to Supabase",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "holeshot-ai-zapier-lead",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_Zapier_FB_Lead",
+      "name": "Webhook - Zapier Facebook Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1100, 0],
+      "webhookId": "holeshot-ai-zapier-lead"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ORGANIZATION_ID = 'REEMPLAZA_ORGANIZATION_ID';\nconst ASSIGNED_TO = 'Alejandro Torres';\n\nconst body = $json.body || $json;\n\nfunction getValue(...values) {\n  for (const value of values) {\n    if (value !== undefined && value !== null && String(value).trim() !== '') {\n      return String(value).trim();\n    }\n  }\n  return '';\n}\n\nfunction cleanPhone(phone) {\n  if (!phone) return '';\n  let cleaned = String(phone).replace(/[^0-9]/g, '');\n  if (cleaned.length === 10 && (cleaned.startsWith('787') || cleaned.startsWith('939'))) {\n    cleaned = '1' + cleaned;\n  }\n  return cleaned;\n}\n\nfunction parseMoney(value) {\n  if (!value) return null;\n  const cleaned = String(value).replace(/[^0-9.]/g, '');\n  if (!cleaned) return null;\n  return Number(cleaned);\n}\n\nconst fullNameRaw = getValue(body.full_name, body.nombre_completo, body.name, body.nombre, body['Full Name'], body['Nombre completo']);\nconst firstName = getValue(body.first_name, body.firstname, body.nombre, body['First Name'], fullNameRaw.split(' ')[0]);\nconst lastName = getValue(body.last_name, body.lastname, body.apellido, body['Last Name'], fullNameRaw.split(' ').slice(1).join(' '));\nconst fullName = fullNameRaw || `${firstName} ${lastName}`.trim();\n\nconst phone = cleanPhone(getValue(body.phone, body.telefono, body.tel, body.mobile, body.celular, body['Phone Number'], body['Telefono']));\nconst email = getValue(body.email, body.correo, body['Email']);\nconst propertyCity = getValue(body.property_city, body.city, body.pueblo, body.municipio, body['Pueblo'], body['Municipio']);\nconst propertyAddress = getValue(body.property_address, body.address, body.direccion, body.direccion_propiedad, body['Direccion']);\nconst propertyCondition = getValue(body.property_condition, body.condition, body.condicion, body['Condicion']);\nconst occupiedStatus = getValue(body.occupied_status, body.ocupada, body.occupancy, body.ocupacion, body['Ocupacion']);\nconst sellingTimeline = getValue(body.selling_timeline, body.timeline, body.tiempo_para_vender, body.cuando_vende, body['Tiempo para vender'], body['Cuando desea vender']);\nconst sellerMotivation = getValue(body.seller_motivation, body.motivation, body.motivo, body.razon, body['Motivo de venta'], body['Motivacion']);\nconst askingPrice = parseMoney(getValue(body.asking_price, body.precio, body.cuanto_quiere, body.price, body['Precio deseado'], body['Cuanto desea recibir']));\nconst mortgageBalance = parseMoney(getValue(body.mortgage_balance, body.balance_hipoteca, body.deuda, body['Balance de hipoteca'], body['Deuda']));\nconst fbLeadId = getValue(body.fb_lead_id, body.leadgen_id, body.id, body['Lead ID'], body['Facebook Lead ID']);\nconst sourceCampaign = getValue(body.source_campaign, body.campaign_name, body.ad_name, body['Campaign Name'], body['Ad Name'], 'Facebook Instant Form');\nconst sourceForm = getValue(body.source_form, body.form_name, body['Form Name'], 'Meta Instant Form');\n\nconst text = `${propertyCondition} ${occupiedStatus} ${sellingTimeline} ${sellerMotivation}`.toLowerCase();\nlet leadScore = 0;\nif (phone) leadScore += 20;\nif (email) leadScore += 5;\nif (propertyCity) leadScore += 10;\nif (propertyAddress) leadScore += 15;\nif (askingPrice !== null) leadScore += 10;\nif (sellingTimeline) leadScore += 10;\nif (sellerMotivation) leadScore += 10;\nif (text.includes('urgente') || text.includes('rapido') || text.includes('ya') || text.includes('inmediato')) leadScore += 20;\nif (text.includes('30') || text.includes('este mes') || text.includes('lo antes')) leadScore += 15;\nif (text.includes('vac') || text.includes('desocup')) leadScore += 10;\nif (text.includes('herencia') || text.includes('hered')) leadScore += 10;\nif (text.includes('repar') || text.includes('dano') || text.includes('mal estado')) leadScore += 10;\nif (text.includes('atras') || text.includes('foreclosure') || text.includes('ejecucion')) leadScore += 20;\n\nlet leadTemperature = 'Frio';\nif (leadScore >= 75) leadTemperature = 'Caliente';\nelse if (leadScore >= 45) leadTemperature = 'Tibio';\n\nconst nextAction = leadTemperature === 'Caliente'\n  ? 'Llamar inmediatamente y pedir detalles de la propiedad'\n  : 'Contactar para calificar motivacion, precio y timeline';\n\nconst now = new Date();\nconst nextFollowUp = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();\n\nreturn [\n  {\n    json: {\n      organization_id: ORGANIZATION_ID,\n      full_name: fullName,\n      first_name: firstName,\n      last_name: lastName,\n      phone,\n      email,\n      source: 'Facebook Lead Ads via Zapier',\n      source_campaign: sourceCampaign,\n      source_form: sourceForm,\n      fb_lead_id: fbLeadId,\n      property_address: propertyAddress,\n      property_city: propertyCity,\n      property_condition: propertyCondition,\n      occupied_status: occupiedStatus,\n      selling_timeline: sellingTimeline,\n      asking_price: askingPrice,\n      mortgage_balance: mortgageBalance,\n      seller_motivation: sellerMotivation,\n      service_interest: 'Vender propiedad',\n      stage: 'Nuevo Lead',\n      lead_status: 'open',\n      lead_temperature: leadTemperature,\n      lead_score: leadScore,\n      assigned_to: ASSIGNED_TO,\n      conversation_summary: `Lead de Facebook. Pueblo: ${propertyCity || 'no indicado'}. Timeline: ${sellingTimeline || 'no indicado'}. Motivacion: ${sellerMotivation || 'no indicada'}. Condicion: ${propertyCondition || 'no indicada'}.`,\n      next_action: nextAction,\n      next_follow_up_at: nextFollowUp,\n      raw_payload: body\n    }\n  }\n];"
+      },
+      "id": "Normalize_Score_FB_Lead",
+      "name": "Normalize + Score Facebook Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-840, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REEMPLAZA_TU_PROYECTO.supabase.co/rest/v1/leads",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "Save_Lead_Supabase",
+      "name": "Save Lead in Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-580, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const savedRaw = $json;\nconst savedLead = Array.isArray(savedRaw) ? savedRaw[0] : savedRaw;\nconst lead = $('Normalize + Score Facebook Lead').first().json;\n\nreturn [\n  {\n    json: {\n      organization_id: lead.organization_id,\n      lead_id: savedLead.id,\n      activity_type: 'lead_created',\n      channel: 'Facebook Lead Ads via Zapier',\n      direction: 'inbound',\n      message: `Lead recibido desde Facebook Instant Form. Score: ${lead.lead_score}. Temperatura: ${lead.lead_temperature}. Accion: ${lead.next_action}`,\n      metadata: {\n        source_campaign: lead.source_campaign,\n        source_form: lead.source_form,\n        fb_lead_id: lead.fb_lead_id,\n        phone: lead.phone\n      },\n      lead\n    }\n  }\n];"
+      },
+      "id": "Build_Activity_Log",
+      "name": "Build Activity Log",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-320, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REEMPLAZA_TU_PROYECTO.supabase.co/rest/v1/lead_activities",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ organization_id: $json.organization_id, lead_id: $json.lead_id, activity_type: $json.activity_type, channel: $json.channel, direction: $json.direction, message: $json.message, metadata: $json.metadata }) }}",
+        "options": {}
+      },
+      "id": "Save_Activity_Log",
+      "name": "Save Activity Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-60, -120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REEMPLAZA_TU_PROYECTO.supabase.co/rest/v1/follow_up_tasks",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer REEMPLAZA_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ organization_id: $json.organization_id, lead_id: $json.lead_id, task_type: 'first_follow_up', due_at: $json.lead.next_follow_up_at, status: 'pending', assigned_to: $json.lead.assigned_to, notes: $json.lead.next_action }) }}",
+        "options": {}
+      },
+      "id": "Create_Follow_Up_Task",
+      "name": "Create Follow-Up Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-60, 120],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $('Normalize + Score Facebook Lead').first().json;\nconst savedRaw = $('Save Lead in Supabase').first().json;\nconst savedLead = Array.isArray(savedRaw) ? savedRaw[0] : savedRaw;\n\nconst message = `NUEVO LEAD - LEADFLOW AI CRM\\n\\nFuente: Facebook Instant Form\\nCampana/Ad: ${lead.source_campaign || 'No indicado'}\\nFormulario: ${lead.source_form || 'No indicado'}\\n\\nNombre: ${lead.full_name || 'No indicado'}\\nTelefono: ${lead.phone || 'No indicado'}\\nEmail: ${lead.email || 'No indicado'}\\n\\nPueblo: ${lead.property_city || 'No indicado'}\\nDireccion: ${lead.property_address || 'No indicada'}\\nCondicion: ${lead.property_condition || 'No indicada'}\\nOcupacion: ${lead.occupied_status || 'No indicado'}\\n\\nQuiere vender: ${lead.selling_timeline || 'No indicado'}\\nPrecio deseado: ${lead.asking_price || 'No indicado'}\\nBalance hipoteca: ${lead.mortgage_balance || 'No indicado'}\\nMotivacion: ${lead.seller_motivation || 'No indicada'}\\n\\nScore: ${lead.lead_score}/100\\nTemperatura: ${lead.lead_temperature}\\nEtapa: ${lead.stage}\\nAccion: ${lead.next_action}\\n\\nCRM Lead ID: ${savedLead.id || 'No disponible'}`;\n\nreturn [\n  {\n    json: {\n      success: true,\n      message,\n      lead_id: savedLead.id,\n      lead_name: lead.full_name,\n      lead_phone: lead.phone\n    }\n  }\n];"
+      },
+      "id": "Build_Telegram_Message",
+      "name": "Build Telegram Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/botREEMPLAZA_TELEGRAM_BOT_TOKEN/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "REEMPLAZA_TELEGRAM_CHAT_ID"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "Send_Telegram_Notification",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, message: 'Lead recibido correctamente en n8n y CRM.', lead_id: $('Build Telegram Message').first().json.lead_id }) }}",
+        "options": {}
+      },
+      "id": "Respond_To_Zapier",
+      "name": "Respond to Zapier",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [740, 0]
+    }
+  ],
+  "connections": {
+    "Webhook - Zapier Facebook Lead": {
+      "main": [
+        [
+          {
+            "node": "Normalize + Score Facebook Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize + Score Facebook Lead": {
+      "main": [
+        [
+          {
+            "node": "Save Lead in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Lead in Supabase": {
+      "main": [
+        [
+          {
+            "node": "Build Activity Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Activity Log": {
+      "main": [
+        [
+          {
+            "node": "Save Activity Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Follow-Up Task",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Build Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Respond to Zapier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
+

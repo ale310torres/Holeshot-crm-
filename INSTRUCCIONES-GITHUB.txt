@@ -1,0 +1,17 @@
+﻿HOLESHOT CRM - SUBIDA A GITHUB
+
+Esta carpeta tiene menos de 100 archivos y esta lista para subir a GitHub.
+
+Sube TODO lo que esta dentro de esta carpeta, no la carpeta completa como carpeta anidada.
+
+No subas node_modules.
+No necesitas subir dist para Vercel; Vercel lo construye solo.
+
+Despues de subir:
+1. En Supabase, ejecuta supabase/schema.sql completo.
+2. En Vercel, conecta este repo.
+3. Agrega las variables:
+   VITE_SUPABASE_URL
+   VITE_SUPABASE_ANON_KEY
+   VITE_APP_NAME=Holeshot CRM
+4. Deploy.
