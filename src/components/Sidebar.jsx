@@ -6,6 +6,7 @@ import { APP_NAME, NAV_ITEMS } from '../utils/constants.js';
 const iconMap = {
   Dashboard: Gauge,
   Leads: UserRoundSearch,
+  Oportunidades: UserRoundSearch,
   Pipeline: KanbanSquare,
   Tareas: CheckSquare,
   Reportes: BarChart3,
@@ -47,7 +48,7 @@ export default function Sidebar() {
         })}
       </nav>
       <div className="border-t border-white/10 p-5 text-xs text-slate-300">
-        Preparado para ventas, seguimientos, equipo y automatizaciones con n8n.
+        Preparado para servicio, piezas, cotizaciones, entregas y automatizaciones con n8n.
       </div>
     </aside>
   );

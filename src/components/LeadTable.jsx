@@ -3,14 +3,14 @@ import { Mail, Phone, UserCheck, MessageCircle, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LeadStageBadge from './LeadStageBadge.jsx';
 import LeadTemperatureBadge from './LeadTemperatureBadge.jsx';
-import { formatShortDate, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
+import { formatCurrency, formatLeadInterest, formatShortDate, formatVehicleSummary, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
 export default function LeadTable({ leads, onMarkContacted, businessName }) {
   if (!leads.length) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
-        <h3 className="text-lg font-bold text-brand-navy">No hay leads todavia</h3>
-        <p className="mt-2 text-slate-500">Crea un lead manual o conecta una fuente para empezar a trabajar.</p>
+        <h3 className="text-lg font-bold text-brand-navy">No hay oportunidades todavia</h3>
+        <p className="mt-2 text-slate-500">Registra una solicitud de servicio, una pieza o una cotizacion para empezar.</p>
       </div>
     );
   }
@@ -21,7 +21,7 @@ export default function LeadTable({ leads, onMarkContacted, businessName }) {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
-              {['Nombre', 'Telefono', 'Email', 'Ciudad/Pueblo', 'Asignado', 'Fuente', 'Score', 'Temperatura', 'Etapa', 'Proxima accion', 'Fecha', 'Acciones'].map((header) => (
+              {['Cliente', 'Telefono', 'Vehiculo', 'Solicitud', 'Urgencia', 'Cotizacion', 'Asignado', 'Etapa', 'Proxima accion', 'Fecha', 'Acciones'].map((header) => (
                 <th key={header} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
                   {header}
                 </th>
@@ -31,14 +31,21 @@ export default function LeadTable({ leads, onMarkContacted, businessName }) {
           <tbody className="divide-y divide-slate-100">
             {leads.map((lead) => (
               <tr key={lead.id} className="hover:bg-slate-50">
-                <td className="px-4 py-4 font-semibold text-brand-navy">{lead.full_name || 'Sin nombre'}</td>
+                <td className="px-4 py-4">
+                  <p className="font-semibold text-brand-navy">{lead.full_name || 'Sin nombre'}</p>
+                  <p className="text-xs text-slate-500">{lead.property_city || lead.email || 'Sin zona'}</p>
+                </td>
                 <td className="px-4 py-4 text-sm text-slate-600">{lead.phone || '-'}</td>
-                <td className="px-4 py-4 text-sm text-slate-600">{lead.email || '-'}</td>
-                <td className="px-4 py-4 text-sm text-slate-600">{lead.property_city || '-'}</td>
+                <td className="px-4 py-4 text-sm text-slate-600">{formatVehicleSummary(lead)}</td>
+                <td className="max-w-[220px] px-4 py-4 text-sm text-slate-600">
+                  <p className="font-semibold text-brand-navy">{formatLeadInterest(lead)}</p>
+                  <p className="text-xs text-slate-500">{lead.part_number || lead.source || 'Manual'}</p>
+                </td>
+                <td className="px-4 py-4">
+                  <LeadTemperatureBadge temperature={lead.urgency === 'Alta' ? 'Caliente' : lead.lead_temperature} />
+                </td>
+                <td className="px-4 py-4 text-sm font-bold text-brand-navy">{formatCurrency(lead.estimate_amount)}</td>
                 <td className="px-4 py-4 text-sm font-semibold text-slate-700">{lead.sales_reps?.name || lead.assigned_to || 'Sin asignar'}</td>
-                <td className="px-4 py-4 text-sm text-slate-600">{lead.source || 'Manual'}</td>
-                <td className="px-4 py-4 text-sm font-bold text-brand-navy">{lead.lead_score ?? 0}</td>
-                <td className="px-4 py-4"><LeadTemperatureBadge temperature={lead.lead_temperature} /></td>
                 <td className="px-4 py-4"><LeadStageBadge stage={lead.stage} /></td>
                 <td className="max-w-[220px] truncate px-4 py-4 text-sm text-slate-600">{lead.next_action || 'Sin proxima accion'}</td>
                 <td className="px-4 py-4 text-sm text-slate-500">{formatShortDate(lead.created_at)}</td>

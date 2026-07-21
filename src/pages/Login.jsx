@@ -29,10 +29,10 @@ export default function Login() {
           <div className="mb-8 flex h-14 w-14 items-center justify-center rounded-lg bg-brand-blue text-xl font-black">HS</div>
           <h1 className="max-w-2xl text-4xl font-black leading-tight sm:text-5xl">{APP_NAME}</h1>
           <p className="mt-5 max-w-xl text-lg text-slate-200">
-            CRM operativo para organizar leads, cotizaciones, servicios y seguimientos de Holeshot.
+            CRM operativo para organizar clientes, motoras, ATV, servicios, piezas, cotizaciones y seguimientos de Holeshot.
           </p>
           <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-            {['Leads claros', 'Seguimiento facil', 'Listo para n8n'].map((item) => (
+            {['Servicio y piezas', 'Motoras y ATV', 'Seguimiento claro'].map((item) => (
               <div key={item} className="rounded-lg border border-white/10 bg-white/5 p-4 text-sm font-semibold text-cyan-100">
                 {item}
               </div>

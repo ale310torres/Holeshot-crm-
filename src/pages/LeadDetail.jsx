@@ -6,8 +6,27 @@ import LeadStageBadge from '../components/LeadStageBadge.jsx';
 import LeadTemperatureBadge from '../components/LeadTemperatureBadge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
-import { LEAD_STAGES, LEAD_TEMPERATURES } from '../utils/constants.js';
-import { formatDate, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
+import {
+  INTEREST_TYPES,
+  LEAD_STAGES,
+  LEAD_TEMPERATURES,
+  PARTS_STATUSES,
+  PAYMENT_STATUSES,
+  QUOTE_STATUSES,
+  SERVICE_CATEGORIES,
+  URGENCIES,
+  VEHICLE_TYPES,
+  WORK_ORDER_STATUSES,
+} from '../utils/constants.js';
+import { formatDate, formatVehicleSummary, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
+
+function normalizeStage(stage) {
+  if (stage === 'Nuevo Lead' || stage === 'Nuevo lead') return 'Nueva solicitud';
+  if (stage === 'No contesto') return 'Seguimiento';
+  if (stage === 'Cualificando' || stage === 'Interesado') return 'Validando vehiculo';
+  if (stage === 'Cita agendada') return 'Servicio agendado';
+  return stage || 'Nueva solicitud';
+}
 
 export default function LeadDetail() {
   const { id } = useParams();
@@ -90,21 +109,31 @@ export default function LeadDetail() {
   async function saveChanges() {
     setSaving(true);
     setMessage('');
-    const previousStage = lead.stage === 'Nuevo Lead' ? 'Nuevo lead' : lead.stage || 'Nuevo lead';
-    const nextStage = form.stage === 'Nuevo Lead' ? 'Nuevo lead' : form.stage || 'Nuevo lead';
+    const previousStage = normalizeStage(lead.stage);
+    const nextStage = normalizeStage(form.stage);
+    const { sales_reps, ...editableFields } = form;
+    const payload = {
+      ...editableFields,
+      stage: nextStage,
+      vehicle_year: editableFields.vehicle_year ? Number(editableFields.vehicle_year) : null,
+      engine_cc: editableFields.engine_cc ? Number(editableFields.engine_cc) : null,
+      estimate_amount: editableFields.estimate_amount ? Number(editableFields.estimate_amount) : null,
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase
       .from('leads')
-      .update({ ...form, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .eq('organization_id', organizationId);
 
     if (error) {
       setMessage('No se pudieron guardar los cambios.');
     } else {
-      setLead(form);
+      setLead({ ...form, stage: nextStage });
+      setForm({ ...form, stage: nextStage });
       setMessage('Cambios guardados correctamente.');
-      await logActivity('lead_updated', 'Lead actualizado desde el CRM.');
+      await logActivity('lead_updated', 'Oportunidad actualizada desde el CRM.');
       if (previousStage !== nextStage) {
         await logActivity('stage_changed', `Etapa cambiada de ${previousStage} a ${nextStage}.`, {
           previous_stage: previousStage,
@@ -131,13 +160,13 @@ export default function LeadDetail() {
     await logActivity(type, messages[type], {}, type.replace('_opened', '').replace('_logged', ''));
   }
 
-  if (loading) return <p className="text-slate-600">Cargando lead...</p>;
+  if (loading) return <p className="text-slate-600">Cargando oportunidad...</p>;
 
   if (!lead || !form) {
     return (
       <div className="rounded-lg bg-white p-8 text-center shadow-sm">
-        <h2 className="text-xl font-bold text-brand-navy">Lead no encontrado</h2>
-        <button onClick={() => navigate('/leads')} className="mt-4 rounded-lg bg-brand-blue px-5 py-3 font-bold text-white">Volver a leads</button>
+        <h2 className="text-xl font-bold text-brand-navy">Oportunidad no encontrada</h2>
+        <button onClick={() => navigate('/leads')} className="mt-4 rounded-lg bg-brand-blue px-5 py-3 font-bold text-white">Volver a oportunidades</button>
       </div>
     );
   }
@@ -146,14 +175,14 @@ export default function LeadDetail() {
     <div className="space-y-5">
       <Link to="/leads" className="inline-flex items-center gap-2 text-sm font-bold text-brand-blue">
         <ArrowLeft className="h-4 w-4" />
-        Volver a leads
+        Volver a oportunidades
       </Link>
 
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <h2 className="text-2xl font-black text-brand-navy">{lead.full_name || 'Sin nombre'}</h2>
-            <p className="mt-1 text-slate-500">Creado el {formatDate(lead.created_at)}</p>
+            <p className="mt-1 text-slate-500">{formatVehicleSummary(form)} / creado el {formatDate(lead.created_at)}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <LeadTemperatureBadge temperature={form.lead_temperature} />
               <LeadStageBadge stage={form.stage} />
@@ -180,29 +209,34 @@ export default function LeadDetail() {
 
       <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
         <section className="space-y-5">
-          <Panel title="Informacion del contacto">
-            <Field label="Nombre" value={form.full_name} onChange={(value) => setForm({ ...form, full_name: value })} />
-            <Field label="Telefono" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
+          <Panel title="Contacto del cliente">
+            <Field label="Cliente" value={form.full_name} onChange={(value) => setForm({ ...form, full_name: value })} />
+            <Field label="Telefono / WhatsApp" value={form.phone} onChange={(value) => setForm({ ...form, phone: value })} />
             <Field label="Email" value={form.email} onChange={(value) => setForm({ ...form, email: value })} />
-            <Field label="Ciudad/Pueblo" value={form.property_city} onChange={(value) => setForm({ ...form, property_city: value })} />
+            <Field label="Pueblo / zona" value={form.property_city} onChange={(value) => setForm({ ...form, property_city: value })} />
           </Panel>
 
-          <Panel title="Propiedad o negocio">
-            <Field label="Property Address" value={form.property_address} onChange={(value) => setForm({ ...form, property_address: value })} />
-            <Field label="Property City" value={form.property_city} onChange={(value) => setForm({ ...form, property_city: value })} />
-            <Field label="Property Condition" value={form.property_condition} onChange={(value) => setForm({ ...form, property_condition: value })} />
-            <Field label="Occupied Status" value={form.occupied_status} onChange={(value) => setForm({ ...form, occupied_status: value })} />
-            <Field label="Selling Timeline" value={form.selling_timeline} onChange={(value) => setForm({ ...form, selling_timeline: value })} />
-            <Field label="Asking Price" value={form.asking_price} onChange={(value) => setForm({ ...form, asking_price: value })} />
-            <Field label="Mortgage Balance" value={form.mortgage_balance} onChange={(value) => setForm({ ...form, mortgage_balance: value })} />
-            <TextField label="Seller Motivation" value={form.seller_motivation} onChange={(value) => setForm({ ...form, seller_motivation: value })} />
+          <Panel title="Motora / ATV">
+            <SelectField label="Tipo de vehiculo" value={form.vehicle_type || 'Motora'} options={VEHICLE_TYPES} onChange={(value) => setForm({ ...form, vehicle_type: value })} />
+            <Field label="Marca" value={form.vehicle_make} onChange={(value) => setForm({ ...form, vehicle_make: value })} />
+            <Field label="Modelo" value={form.vehicle_model} onChange={(value) => setForm({ ...form, vehicle_model: value })} />
+            <Field label="Ano" type="number" value={form.vehicle_year} onChange={(value) => setForm({ ...form, vehicle_year: value })} />
+            <Field label="CC" type="number" value={form.engine_cc} onChange={(value) => setForm({ ...form, engine_cc: value })} />
+            <Field label="VIN / serie" value={form.vin} onChange={(value) => setForm({ ...form, vin: value })} />
           </Panel>
 
-          <Panel title="Campos generales">
-            <Field label="Service Interest" value={form.service_interest} onChange={(value) => setForm({ ...form, service_interest: value })} />
-            <Field label="Budget" value={form.budget} onChange={(value) => setForm({ ...form, budget: value })} />
-            <Field label="Timeline" value={form.timeline} onChange={(value) => setForm({ ...form, timeline: value })} />
-            <TextField label="Message" value={form.message} onChange={(value) => setForm({ ...form, message: value })} />
+          <Panel title="Servicio, pieza y cotizacion">
+            <SelectField label="Tipo de solicitud" value={form.interest_type || 'Servicio'} options={INTEREST_TYPES} onChange={(value) => setForm({ ...form, interest_type: value })} />
+            <SelectField label="Categoria" value={form.service_category || 'Diagnostico'} options={SERVICE_CATEGORIES} onChange={(value) => setForm({ ...form, service_category: value })} />
+            <Field label="Servicio solicitado" value={form.requested_service || form.service_interest} onChange={(value) => setForm({ ...form, requested_service: value, service_interest: value })} />
+            <Field label="Pieza solicitada" value={form.requested_part} onChange={(value) => setForm({ ...form, requested_part: value })} />
+            <Field label="Numero de parte" value={form.part_number} onChange={(value) => setForm({ ...form, part_number: value })} />
+            <Field label="Estimado / valor potencial" type="number" value={form.estimate_amount} onChange={(value) => setForm({ ...form, estimate_amount: value })} />
+            <SelectField label="Estado de cotizacion" value={form.quote_status || 'Sin cotizacion'} options={QUOTE_STATUSES} onChange={(value) => setForm({ ...form, quote_status: value })} />
+            <SelectField label="Estado de piezas" value={form.parts_status || 'No aplica'} options={PARTS_STATUSES} onChange={(value) => setForm({ ...form, parts_status: value })} />
+            <SelectField label="Orden de servicio" value={form.work_order_status || 'Sin orden'} options={WORK_ORDER_STATUSES} onChange={(value) => setForm({ ...form, work_order_status: value })} />
+            <SelectField label="Pago" value={form.payment_status || 'Pendiente'} options={PAYMENT_STATUSES} onChange={(value) => setForm({ ...form, payment_status: value })} />
+            <TextField label="Mensaje del cliente" value={form.message} onChange={(value) => setForm({ ...form, message: value })} />
             <TextField label="Notas internas" value={form.notes} onChange={(value) => setForm({ ...form, notes: value })} />
           </Panel>
         </section>
@@ -211,18 +245,18 @@ export default function LeadDetail() {
           <Panel title="Seguimiento">
             <label className="block text-sm font-semibold text-slate-700">
               Etapa
-              <select value={form.stage === 'Nuevo Lead' ? 'Nuevo lead' : form.stage || 'Nuevo lead'} onChange={(event) => setForm({ ...form, stage: event.target.value })} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3">
+              <select value={normalizeStage(form.stage)} onChange={(event) => setForm({ ...form, stage: event.target.value })} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3">
                 {LEAD_STAGES.map((stage) => <option key={stage}>{stage}</option>)}
               </select>
             </label>
             <label className="block text-sm font-semibold text-slate-700">
-              Temperatura
+              Prioridad comercial
               <select value={form.lead_temperature || 'Sin clasificar'} onChange={(event) => setForm({ ...form, lead_temperature: event.target.value })} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3">
                 {LEAD_TEMPERATURES.map((temp) => <option key={temp}>{temp}</option>)}
               </select>
             </label>
             <Field label="Fuente" value={form.source} onChange={(value) => setForm({ ...form, source: value })} />
-            <Field label="Score" type="number" value={form.lead_score ?? 0} onChange={(value) => setForm({ ...form, lead_score: Number(value) })} />
+            <SelectField label="Urgencia del cliente" value={form.urgency || 'Media'} options={URGENCIES} onChange={(value) => setForm({ ...form, urgency: value })} />
             {isManager ? (
               <label className="block text-sm font-semibold text-slate-700 sm:col-span-2">
                 Asignado a
@@ -281,6 +315,17 @@ function Field({ label, value, onChange, type = 'text' }) {
     <label className="block text-sm font-semibold text-slate-700">
       {label}
       <input type={type} value={value || ''} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-brand-blue" />
+    </label>
+  );
+}
+
+function SelectField({ label, value, options, onChange }) {
+  return (
+    <label className="block text-sm font-semibold text-slate-700">
+      {label}
+      <select value={value || ''} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 outline-none focus:border-brand-blue">
+        {options.map((option) => <option key={option}>{option}</option>)}
+      </select>
     </label>
   );
 }

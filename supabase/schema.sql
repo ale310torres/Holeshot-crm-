@@ -145,6 +145,7 @@ create table if not exists public.leads (
   utm_campaign text,
   utm_medium text,
   utm_content text,
+  -- Campos legacy usados por pantallas anteriores. En Holeshot se muestran como direccion/zona del cliente.
   property_address text,
   property_city text,
   property_zip text,
@@ -179,7 +180,7 @@ create table if not exists public.leads (
   parts_status text not null default 'No aplica',
   payment_status text not null default 'Pendiente',
   lost_reason text,
-  stage text not null default 'Nuevo lead',
+  stage text not null default 'Nueva solicitud',
   lead_status text not null default 'open',
   lead_temperature text not null default 'Sin clasificar',
   lead_score integer not null default 0,
@@ -213,11 +214,23 @@ alter table public.leads add column if not exists work_order_status text not nul
 alter table public.leads add column if not exists parts_status text not null default 'No aplica';
 alter table public.leads add column if not exists payment_status text not null default 'Pendiente';
 alter table public.leads add column if not exists lost_reason text;
-alter table public.leads alter column stage set default 'Nuevo lead';
+alter table public.leads alter column stage set default 'Nueva solicitud';
 
 update public.leads
-set stage = 'Nuevo lead'
-where stage = 'Nuevo Lead';
+set stage = 'Nueva solicitud'
+where stage in ('Nuevo Lead', 'Nuevo lead');
+
+update public.leads
+set stage = 'Validando vehiculo'
+where stage in ('Cualificando', 'Interesado');
+
+update public.leads
+set stage = 'Servicio agendado'
+where stage = 'Cita agendada';
+
+update public.leads
+set stage = 'Seguimiento'
+where stage = 'No contesto';
 
 create table if not exists public.lead_activities (
   id uuid primary key default gen_random_uuid(),

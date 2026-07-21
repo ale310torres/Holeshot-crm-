@@ -25,8 +25,34 @@ export function getEmailHref(email) {
 
 export function getWhatsAppHref(phone, name, businessName = 'Holeshot') {
   const clean = cleanPhone(phone);
-  const message = `Hola ${name || ''}, soy de ${businessName}. Recibimos tu solicitud y queria ayudarte con la informacion. Tienes unos minutos?`;
+  const message = `Hola ${name || ''}, soy de ${businessName}. Recibimos tu solicitud sobre servicio o piezas y queria ayudarte con la informacion. Tienes unos minutos?`;
   return clean ? `https://wa.me/${clean.replace('+', '')}?text=${encodeURIComponent(message)}` : '#';
+}
+
+export function formatCurrency(value) {
+  const amount = Number(value || 0);
+  if (!amount) return '-';
+  return new Intl.NumberFormat('es-PR', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export function formatVehicleSummary(lead) {
+  const year = lead?.vehicle_year ? String(lead.vehicle_year) : '';
+  const make = lead?.vehicle_make || '';
+  const model = lead?.vehicle_model || '';
+  const cc = lead?.engine_cc ? `${lead.engine_cc}cc` : '';
+  const type = lead?.vehicle_type || '';
+  const summary = [year, make, model, cc].filter(Boolean).join(' ');
+  return summary || type || 'Vehiculo sin especificar';
+}
+
+export function formatLeadInterest(lead) {
+  const interest = lead?.interest_type || 'Servicio';
+  const detail = lead?.requested_service || lead?.requested_part || lead?.service_interest || lead?.service_category || '';
+  return detail ? `${interest}: ${detail}` : interest;
 }
 
 export function percentage(value) {

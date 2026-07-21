@@ -1,18 +1,48 @@
 export const APP_NAME = import.meta.env.VITE_APP_NAME || 'Holeshot CRM';
 
 export const LEAD_STAGES = [
-  'Nuevo lead',
+  'Nueva solicitud',
   'Contactado',
-  'No contesto',
-  'Cualificando',
-  'Interesado',
+  'Validando vehiculo',
   'Cotizacion enviada',
+  'Esperando piezas',
+  'Servicio agendado',
+  'En trabajo',
   'Seguimiento',
+  'Listo para entregar',
   'Cerrado ganado',
   'Cerrado perdido',
 ];
 
 export const LEAD_TEMPERATURES = ['Caliente', 'Tibio', 'Frio', 'Sin clasificar'];
+
+export const INTEREST_TYPES = ['Servicio', 'Pieza', 'Servicio + pieza', 'Cotizacion', 'Garantia / revision', 'Otro'];
+
+export const VEHICLE_TYPES = ['Motora', 'ATV', 'UTV', 'Pit bike', 'Scooter', 'Otro'];
+
+export const SERVICE_CATEGORIES = [
+  'Diagnostico',
+  'Mantenimiento',
+  'Motor',
+  'Frenos',
+  'Suspension',
+  'Transmision',
+  'Carburador / inyeccion',
+  'Electrico',
+  'Gomas / ruedas',
+  'Instalacion de pieza',
+  'Otro',
+];
+
+export const URGENCIES = ['Alta', 'Media', 'Baja'];
+
+export const QUOTE_STATUSES = ['Sin cotizacion', 'Por cotizar', 'Cotizada', 'Aprobada', 'Rechazada'];
+
+export const PARTS_STATUSES = ['No aplica', 'En stock', 'Ordenada', 'Pendiente de suplidor', 'Recibida'];
+
+export const WORK_ORDER_STATUSES = ['Sin orden', 'Pendiente', 'Agendada', 'En trabajo', 'Completada', 'Entregada'];
+
+export const PAYMENT_STATUSES = ['Pendiente', 'Deposito recibido', 'Pagado', 'Balance pendiente'];
 
 export const TASK_STATUSES = ['pending', 'completed', 'cancelled'];
 
@@ -29,6 +59,9 @@ export const TASK_TYPES = [
   { value: 'email', label: 'Email' },
   { value: 'quote_follow_up', label: 'Seguimiento de cotizacion' },
   { value: 'service_follow_up', label: 'Seguimiento de servicio' },
+  { value: 'parts_follow_up', label: 'Seguimiento de piezas' },
+  { value: 'appointment', label: 'Cita / entrega' },
+  { value: 'payment_follow_up', label: 'Seguimiento de pago' },
   { value: 'general', label: 'General' },
 ];
 
@@ -63,8 +96,8 @@ export const ACTIVITY_TYPES = [
 ];
 
 export const ACTIVITY_TYPE_LABELS = {
-  lead_created: 'Lead creado',
-  lead_updated: 'Lead actualizado',
+  lead_created: 'Oportunidad creada',
+  lead_updated: 'Oportunidad actualizada',
   stage_changed: 'Etapa cambiada',
   note_created: 'Nota creada',
   call_logged: 'Llamada registrada',
@@ -73,12 +106,12 @@ export const ACTIVITY_TYPE_LABELS = {
   task_created: 'Tarea creada',
   task_completed: 'Tarea completada',
   automation_error: 'Error de automatizacion',
-  facebook_lead_received: 'Lead recibido de Facebook',
+  facebook_lead_received: 'Solicitud recibida de Facebook',
 };
 
 export const NAV_ITEMS = [
   { label: 'Dashboard', path: '/', enabled: true },
-  { label: 'Leads', path: '/leads', enabled: true },
+  { label: 'Oportunidades', path: '/leads', enabled: true },
   { label: 'Pipeline', path: '/pipeline', enabled: true },
   { label: 'Tareas', path: '/tareas', enabled: true },
   { label: 'Reportes', path: '/reportes', enabled: false },
@@ -89,11 +122,14 @@ export const NAV_ITEMS = [
 export const SOURCES = [
   'Manual',
   'WhatsApp',
+  'Llamada',
+  'Walk-in',
   'Instagram',
+  'Facebook',
   'Referido',
-  'Local',
   'Web',
-  'Evento',
+  'Tienda',
+  'Evento / pista',
   'Marketplace',
   'n8n',
   'Otro',

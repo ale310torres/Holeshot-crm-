@@ -6,7 +6,7 @@ import LeadTemperatureBadge from '../components/LeadTemperatureBadge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
 import { TASK_TYPE_LABELS, TASK_TYPES } from '../utils/constants.js';
-import { formatDate, formatDateTimeLocalInput, isOverdue, toIsoFromLocalInput } from '../utils/formatters.js';
+import { formatDate, isOverdue, toIsoFromLocalInput } from '../utils/formatters.js';
 
 const emptyTask = {
   lead_id: '',
@@ -34,12 +34,12 @@ export default function Tasks() {
     const [taskResult, leadResult, repResult] = await Promise.all([
       supabase
         .from('follow_up_tasks')
-        .select('*, leads(id, full_name, phone, email, property_city, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
+        .select('*, leads(id, full_name, phone, email, property_city, vehicle_type, vehicle_make, vehicle_model, requested_service, requested_part, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
         .eq('organization_id', organizationId)
         .order('due_at', { ascending: true, nullsFirst: false }),
       supabase
         .from('leads')
-        .select('id, full_name, phone, email, property_city, stage, lead_temperature, assigned_to, assigned_rep_id')
+        .select('id, full_name, phone, email, property_city, vehicle_type, vehicle_make, vehicle_model, requested_service, requested_part, stage, lead_temperature, assigned_to, assigned_rep_id')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false }),
       supabase
@@ -134,7 +134,7 @@ export default function Tasks() {
     const { data, error: insertError } = await supabase
       .from('follow_up_tasks')
       .insert(payload)
-      .select('*, leads(id, full_name, phone, email, property_city, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
+      .select('*, leads(id, full_name, phone, email, property_city, vehicle_type, vehicle_make, vehicle_model, requested_service, requested_part, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
       .single();
 
     if (insertError) {
@@ -155,7 +155,7 @@ export default function Tasks() {
       .update({ status: 'completed', completed_at: completedAt, updated_at: completedAt })
       .eq('id', task.id)
       .eq('organization_id', organizationId)
-      .select('*, leads(id, full_name, phone, email, property_city, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
+      .select('*, leads(id, full_name, phone, email, property_city, vehicle_type, vehicle_make, vehicle_model, requested_service, requested_part, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
       .single();
 
     if (updateError) {
@@ -173,7 +173,7 @@ export default function Tasks() {
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', task.id)
       .eq('organization_id', organizationId)
-      .select('*, leads(id, full_name, phone, email, property_city, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
+      .select('*, leads(id, full_name, phone, email, property_city, vehicle_type, vehicle_make, vehicle_model, requested_service, requested_part, stage, lead_temperature, assigned_rep_id), sales_reps(id, name, initials)')
       .single();
 
     if (updateError) {
@@ -189,7 +189,7 @@ export default function Tasks() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-black text-brand-navy">Tareas</h2>
-          <p className="mt-1 text-slate-500">Organiza seguimientos, llamadas y proximas acciones por lead.</p>
+          <p className="mt-1 text-slate-500">Organiza llamadas, cotizaciones, piezas pendientes, citas y entregas.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button onClick={loadData} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-3 font-bold text-slate-700 transition hover:border-brand-blue hover:text-brand-blue">
@@ -241,17 +241,22 @@ export default function Tasks() {
                   {task.leads?.lead_temperature && <LeadTemperatureBadge temperature={task.leads.lead_temperature} />}
                 </div>
                 <h3 className="mt-3 text-lg font-bold text-brand-navy">
-                  {task.leads?.full_name || 'Tarea sin lead relacionado'}
+                  {task.leads?.full_name || 'Tarea sin oportunidad relacionada'}
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
                   Vence: {task.due_at ? formatDate(task.due_at) : 'Sin fecha'} {task.assigned_to ? ` / Asignado a ${task.assigned_to}` : ''}
                 </p>
+                {task.leads && (
+                  <p className="mt-1 text-sm text-slate-500">
+                    {[task.leads.vehicle_make, task.leads.vehicle_model, task.leads.requested_part || task.leads.requested_service].filter(Boolean).join(' / ') || task.leads.phone}
+                  </p>
+                )}
                 {task.notes && <p className="mt-2 text-sm text-slate-600">{task.notes}</p>}
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end">
                 {task.lead_id && (
                   <Link to={`/leads/${task.lead_id}`} className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 hover:border-brand-blue hover:text-brand-blue">
-                    Abrir lead
+                    Abrir oportunidad
                   </Link>
                 )}
                 {task.status === 'pending' && (
@@ -273,7 +278,7 @@ export default function Tasks() {
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
               <Clock className="mx-auto h-9 w-9 text-slate-300" />
               <h3 className="mt-3 text-lg font-bold text-brand-navy">No hay tareas con estos filtros</h3>
-              <p className="mt-1 text-slate-500">Crea una tarea o cambia los filtros para ver mas seguimiento.</p>
+              <p className="mt-1 text-slate-500">Crea una llamada, seguimiento de pieza, cotizacion o entrega.</p>
             </div>
           )}
         </section>
@@ -290,10 +295,10 @@ export default function Tasks() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-slate-700">
-                Lead relacionado
+                Oportunidad relacionada
                 <select value={form.lead_id} onChange={(event) => setForm({ ...form, lead_id: event.target.value })} className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3">
-                  <option value="">Seleccionar lead</option>
-                  {leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.full_name || lead.phone || 'Lead sin nombre'}</option>)}
+                  <option value="">Seleccionar oportunidad</option>
+                  {leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.full_name || lead.phone || 'Solicitud sin nombre'}</option>)}
                 </select>
               </label>
               <label className="block text-sm font-semibold text-slate-700">
@@ -317,7 +322,7 @@ export default function Tasks() {
                     }}
                     className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3"
                   >
-                    <option value="">Usar asignado del lead</option>
+                    <option value="">Usar asignado de la oportunidad</option>
                     {salesReps.map((rep) => <option key={rep.id} value={rep.id}>{rep.name}</option>)}
                   </select>
                 </label>
@@ -354,7 +359,7 @@ function SummaryCard({ title, value, tone }) {
       <p className="text-sm font-medium text-slate-500">{title}</p>
       <div className="mt-3 flex items-center justify-between">
         <p className="text-3xl font-black text-brand-navy">{value}</p>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${toneClass}`}>Fase 2</span>
+        <span className={`rounded-full px-3 py-1 text-xs font-bold ${toneClass}`}>Holeshot</span>
       </div>
     </div>
   );

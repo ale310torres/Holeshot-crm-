@@ -1,13 +1,14 @@
-# Holeshot CRM - copia tipo Homepower
+# Holeshot CRM
 
-Esta es una copia nueva basada en el CRM funcional tipo Homepower/LeadFlow, adaptada para Holeshot.
+CRM operativo para Holeshot: servicio, piezas, motoras, ATV, cotizaciones, tareas y seguimiento.
 
-No usa la app estatica vieja de `app.js`, ni `save-guard`, ni parches externos. Es una app React/Vite con Supabase, rutas privadas, leads, pipeline, tareas, usuarios y configuracion.
+No usa la app estatica vieja de `app.js`, ni `save-guard`, ni parches externos. Es una app React/Vite con Supabase, rutas privadas, oportunidades, pipeline, tareas, usuarios y configuracion.
 
 ## Que cambia contra la version vieja
 
 - Login y sesion con el patron del CRM funcional.
-- Leads guardados directamente en Supabase con `.insert().select().single()`.
+- Oportunidades guardadas directamente en Supabase con `.insert().select().single()`.
+- Campos alineados a Holeshot: tipo de vehiculo, marca, modelo, CC, servicio, pieza, numero de parte, urgencia, cotizacion, estado de piezas, orden de servicio y pago.
 - Perfil de usuario con cache local para que el CRM no se quede cargando si Supabase tarda.
 - Bootstrap automatico: si el usuario entra y no tiene perfil, el CRM intenta crear la organizacion Holeshot y ponerlo como owner.
 - SQL idempotente: puedes ejecutar `supabase/schema.sql` mas de una vez.

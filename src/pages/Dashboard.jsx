@@ -7,7 +7,7 @@ import RoleBadge from '../components/RoleBadge.jsx';
 import TaskStatusBadge from '../components/TaskStatusBadge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { supabase } from '../lib/supabaseClient.js';
-import { formatShortDate, isOverdue, percentage } from '../utils/formatters.js';
+import { formatLeadInterest, formatShortDate, isOverdue, percentage } from '../utils/formatters.js';
 
 export default function Dashboard() {
   const { organizationId, profile, role, isManager } = useAuth();
@@ -59,9 +59,12 @@ export default function Dashboard() {
 
     return {
       total,
-      newLeads: leads.filter((lead) => ['Nuevo lead', 'Nuevo Lead'].includes(lead.stage)).length,
-      hot: leads.filter((lead) => lead.lead_temperature === 'Caliente').length,
-      followUp: leads.filter((lead) => lead.stage === 'Seguimiento' || lead.next_follow_up_at).length,
+      newLeads: leads.filter((lead) => ['Nueva solicitud', 'Nuevo lead', 'Nuevo Lead'].includes(lead.stage)).length,
+      service: leads.filter((lead) => String(lead.interest_type || lead.service_interest || '').toLowerCase().includes('servicio')).length,
+      parts: leads.filter((lead) => String(lead.interest_type || '').toLowerCase().includes('pieza') || lead.requested_part).length,
+      quotes: leads.filter((lead) => ['Por cotizar', 'Cotizada', 'Cotizacion enviada'].includes(lead.quote_status) || lead.stage === 'Cotizacion enviada').length,
+      hot: leads.filter((lead) => lead.lead_temperature === 'Caliente' || lead.urgency === 'Alta').length,
+      followUp: leads.filter((lead) => ['Seguimiento', 'Esperando piezas'].includes(lead.stage) || lead.next_follow_up_at).length,
       won,
       lost: leads.filter((lead) => lead.stage === 'Cerrado perdido').length,
       conversion: total ? (won / total) * 100 : 0,
@@ -78,7 +81,7 @@ export default function Dashboard() {
       return {
         ...rep,
         totalLeads: repLeads.length,
-        hotLeads: repLeads.filter((lead) => lead.lead_temperature === 'Caliente').length,
+        hotLeads: repLeads.filter((lead) => lead.lead_temperature === 'Caliente' || lead.urgency === 'Alta').length,
         won,
         pendingTasks: repTasks.filter((task) => task.status === 'pending').length,
         overdueTasks: repTasks.filter((task) => task.status === 'pending' && isOverdue(task.due_at)).length,
@@ -98,7 +101,7 @@ export default function Dashboard() {
             <RoleBadge role={role} />
           </div>
           <p className="mt-1 text-slate-500">
-            {isManager ? 'Vista de equipo y rendimiento comercial.' : 'Vista personal de tus leads y seguimientos.'}
+            {isManager ? 'Vista de taller, piezas, cotizaciones y seguimiento del equipo.' : 'Vista personal de tus oportunidades y seguimientos.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -106,7 +109,7 @@ export default function Dashboard() {
             Ver pipeline
           </Link>
           <Link to="/leads" className="rounded-lg bg-brand-blue px-5 py-3 text-center font-bold text-white transition hover:bg-blue-600">
-            Ver leads
+            Ver oportunidades
           </Link>
         </div>
       </div>
@@ -114,27 +117,29 @@ export default function Dashboard() {
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="Total de leads" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis leads'} tone="navy" />
-        <MetricCard title="Leads nuevos" value={metrics.newLeads} helper="Entrantes" tone="blue" />
-        <MetricCard title="Leads calientes" value={metrics.hot} helper="Prioridad" tone="red" />
-        <MetricCard title="Pendientes de seguimiento" value={metrics.followUp} helper="Accion" tone="yellow" />
+        <MetricCard title="Oportunidades" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis casos'} tone="navy" />
+        <MetricCard title="Solicitudes nuevas" value={metrics.newLeads} helper="Entrantes" tone="blue" />
+        <MetricCard title="Servicios" value={metrics.service} helper="Taller" tone="cyan" />
+        <MetricCard title="Piezas" value={metrics.parts} helper="Partes" tone="yellow" />
+        <MetricCard title="Por cotizar" value={metrics.quotes} helper="Cotizaciones" tone="cyan" />
+        <MetricCard title="Urgentes" value={metrics.hot} helper="Prioridad" tone="red" />
         <MetricCard title="Tareas pendientes" value={metrics.pendingTasks} helper="Hoy" tone="cyan" />
         <MetricCard title="Tareas vencidas" value={metrics.overdueTasks} helper="Atencion" tone="red" />
         <MetricCard title="Cerrados ganados" value={metrics.won} helper="Ventas" tone="green" />
-        <MetricCard title="Conversion rate" value={percentage(metrics.conversion)} helper="Basico" tone="cyan" />
+        <MetricCard title="Conversion" value={percentage(metrics.conversion)} helper="Ganadas" tone="cyan" />
       </section>
 
       {isManager && (
         <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="font-bold text-brand-navy">Analiticos por vendedor</h3>
-            <p className="mt-1 text-sm text-slate-500">Resumen para lideres, jefes y gerentes.</p>
+            <h3 className="font-bold text-brand-navy">Rendimiento por area</h3>
+            <p className="mt-1 text-sm text-slate-500">Ventas, servicio y piezas con tareas pendientes.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-slate-200">
               <thead className="bg-slate-50">
                 <tr>
-                  {['Vendedor', 'Leads', 'Calientes', 'Ganados', 'Tareas pendientes', 'Tareas vencidas', 'Conversion'].map((header) => (
+                  {['Area / vendedor', 'Oportunidades', 'Urgentes', 'Ganadas', 'Tareas pendientes', 'Tareas vencidas', 'Conversion'].map((header) => (
                     <th key={header} className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-500">{header}</th>
                   ))}
                 </tr>
@@ -153,7 +158,7 @@ export default function Dashboard() {
                 ))}
                 {!repAnalytics.length && (
                   <tr>
-                    <td colSpan="7" className="px-4 py-8 text-center text-slate-500">Crea vendedores en Usuarios para ver analiticos por equipo.</td>
+                    <td colSpan="7" className="px-4 py-8 text-center text-slate-500">Crea areas o vendedores en Usuarios para ver analiticos por equipo.</td>
                   </tr>
                 )}
               </tbody>
@@ -165,21 +170,21 @@ export default function Dashboard() {
       <div className="grid gap-5 xl:grid-cols-[1fr_420px]">
         <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4">
-            <h3 className="font-bold text-brand-navy">Leads recientes</h3>
+            <h3 className="font-bold text-brand-navy">Solicitudes recientes</h3>
           </div>
           <div className="divide-y divide-slate-100">
             {leads.slice(0, 8).map((lead) => (
               <Link key={lead.id} to={`/leads/${lead.id}`} className="grid gap-3 px-5 py-4 hover:bg-slate-50 md:grid-cols-[1fr_auto_auto_auto] md:items-center">
                 <div>
                   <p className="font-bold text-brand-navy">{lead.full_name || 'Sin nombre'}</p>
-                  <p className="text-sm text-slate-500">{lead.sales_reps?.name || lead.assigned_to || lead.phone || lead.email || 'Sin contacto'}</p>
+                  <p className="text-sm text-slate-500">{formatLeadInterest(lead)} / {lead.sales_reps?.name || lead.assigned_to || lead.phone || 'Sin asignar'}</p>
                 </div>
                 <LeadTemperatureBadge temperature={lead.lead_temperature} />
                 <LeadStageBadge stage={lead.stage} />
                 <p className="text-sm text-slate-500">{formatShortDate(lead.created_at)}</p>
               </Link>
             ))}
-            {!leads.length && <p className="px-5 py-8 text-center text-slate-500">Todavia no hay leads para mostrar.</p>}
+            {!leads.length && <p className="px-5 py-8 text-center text-slate-500">Todavia no hay solicitudes para mostrar.</p>}
           </div>
         </section>
 
@@ -191,7 +196,7 @@ export default function Dashboard() {
             {tasks.filter((task) => task.status === 'pending').slice(0, 6).map((task) => (
               <Link key={task.id} to={task.lead_id ? `/leads/${task.lead_id}` : '/tareas'} className="block px-5 py-4 hover:bg-slate-50">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="font-bold text-brand-navy">{task.leads?.full_name || 'Tarea sin lead'}</p>
+                  <p className="font-bold text-brand-navy">{task.leads?.full_name || 'Tarea sin oportunidad'}</p>
                   <TaskStatusBadge status={task.status} dueAt={task.due_at} />
                 </div>
                 <p className="mt-1 text-sm text-slate-500">{task.due_at ? formatShortDate(task.due_at) : 'Sin fecha'} {task.assigned_to ? `/ ${task.assigned_to}` : ''}</p>

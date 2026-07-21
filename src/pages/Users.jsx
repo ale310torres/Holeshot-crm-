@@ -164,7 +164,7 @@ export default function Users() {
           <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-5 py-4">
               <h3 className="font-bold text-brand-navy">Vendedores</h3>
-              <p className="mt-1 text-sm text-slate-500">Cada lead y tarea puede asignarse a un vendedor.</p>
+              <p className="mt-1 text-sm text-slate-500">Cada solicitud, pieza, servicio o tarea puede asignarse a un area o vendedor.</p>
             </div>
             <div className="divide-y divide-slate-100">
               {loading ? (
@@ -237,7 +237,7 @@ export default function Users() {
               <Input label="Email" type="email" value={repForm.email} onChange={(value) => setRepForm({ ...repForm, email: value })} />
               <Input label="Telefono" value={repForm.phone} onChange={(value) => setRepForm({ ...repForm, phone: value })} />
               <Input label="Region" value={repForm.region} onChange={(value) => setRepForm({ ...repForm, region: value })} />
-              <Input label="Max leads por dia" type="number" value={repForm.max_daily_leads} onChange={(value) => setRepForm({ ...repForm, max_daily_leads: value })} />
+              <Input label="Max solicitudes por dia" type="number" value={repForm.max_daily_leads} onChange={(value) => setRepForm({ ...repForm, max_daily_leads: value })} />
             </div>
             <button disabled={saving} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-blue px-5 py-3 font-bold text-white disabled:opacity-60">
               <Save className="h-5 w-5" />

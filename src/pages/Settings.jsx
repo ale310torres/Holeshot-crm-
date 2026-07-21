@@ -13,6 +13,13 @@ export default function Settings() {
     primary_phone: '',
     primary_email: '',
     website_url: '',
+    business_type: 'motocross_service_parts',
+    whatsapp_number: '',
+    address_line1: '',
+    city: '',
+    state: '',
+    country: 'Puerto Rico',
+    timezone: 'America/Puerto_Rico',
     active: true,
   });
   const [saving, setSaving] = useState(false);
@@ -29,6 +36,13 @@ export default function Settings() {
         primary_phone: organization.primary_phone || '',
         primary_email: organization.primary_email || '',
         website_url: organization.website_url || '',
+        business_type: organization.business_type || 'motocross_service_parts',
+        whatsapp_number: organization.whatsapp_number || '',
+        address_line1: organization.address_line1 || '',
+        city: organization.city || '',
+        state: organization.state || '',
+        country: organization.country || 'Puerto Rico',
+        timezone: organization.timezone || 'America/Puerto_Rico',
         active: organization.active ?? true,
       });
     }
@@ -46,7 +60,7 @@ export default function Settings() {
       .update({ ...form, updated_at: new Date().toISOString() })
       .eq('id', organizationId);
 
-    if (updateError) setError('No se pudo actualizar la organizacion. Revisa las policies de Fase 3.');
+    if (updateError) setError('No se pudo actualizar la configuracion. Verifica que el schema nuevo este ejecutado en Supabase.');
     else setMessage('Configuracion guardada correctamente.');
     setSaving(false);
   }
@@ -55,7 +69,7 @@ export default function Settings() {
     <div className="space-y-5">
       <div>
         <h2 className="text-2xl font-black text-brand-navy">Configuracion</h2>
-        <p className="mt-1 text-slate-500">Datos principales de este cliente y su CRM individual.</p>
+        <p className="mt-1 text-slate-500">Datos del taller, tienda de piezas y operacion Holeshot.</p>
       </div>
 
       {!isAdmin && (
@@ -70,14 +84,20 @@ export default function Settings() {
         <div className="grid gap-4 md:grid-cols-2">
           <Input label="Nombre del negocio" value={form.name} onChange={(value) => setForm({ ...form, name: value })} required />
           <Input label="Slug" value={form.slug} onChange={(value) => setForm({ ...form, slug: value })} required />
-          <Input label="Nicho" value={form.niche} onChange={(value) => setForm({ ...form, niche: value })} />
+          <Input label="Especialidad" value={form.niche} onChange={(value) => setForm({ ...form, niche: value })} />
           <Input label="Logo URL" value={form.logo_url} onChange={(value) => setForm({ ...form, logo_url: value })} />
           <Input label="Telefono principal" value={form.primary_phone} onChange={(value) => setForm({ ...form, primary_phone: value })} />
+          <Input label="WhatsApp" value={form.whatsapp_number} onChange={(value) => setForm({ ...form, whatsapp_number: value })} />
           <Input label="Email principal" type="email" value={form.primary_email} onChange={(value) => setForm({ ...form, primary_email: value })} />
           <Input label="Website" value={form.website_url} onChange={(value) => setForm({ ...form, website_url: value })} />
+          <Input label="Direccion" value={form.address_line1} onChange={(value) => setForm({ ...form, address_line1: value })} />
+          <Input label="Pueblo" value={form.city} onChange={(value) => setForm({ ...form, city: value })} />
+          <Input label="Estado / region" value={form.state} onChange={(value) => setForm({ ...form, state: value })} />
+          <Input label="Pais" value={form.country} onChange={(value) => setForm({ ...form, country: value })} />
+          <Input label="Zona horaria" value={form.timezone} onChange={(value) => setForm({ ...form, timezone: value })} />
           <label className="flex items-center gap-3 rounded-lg border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
             <input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} className="h-4 w-4" />
-            Cliente activo
+            Operacion activa
           </label>
         </div>
 
@@ -88,9 +108,9 @@ export default function Settings() {
       </form>
 
       <section className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="font-bold text-brand-navy">Separacion multi-cliente</h3>
+        <h3 className="font-bold text-brand-navy">Operacion separada por negocio</h3>
         <p className="mt-2 text-sm text-slate-500">
-          Todos los leads, tareas, reps y actividades se filtran por organization_id. Cada cliente entra a su propio CRM y no ve data de otros clientes.
+          Las oportunidades, tareas, piezas, servicios, usuarios y actividades se filtran por organization_id. Holeshot trabaja en su propio CRM sin mezclar datos con otros negocios.
         </p>
       </section>
     </div>

@@ -9,9 +9,11 @@ import { LEAD_STAGES } from '../utils/constants.js';
 import { formatShortDate, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
 function normalizeStage(stage) {
-  if (stage === 'No contesto') return 'No contesto';
-  if (stage === 'Nuevo Lead') return 'Nuevo lead';
-  return stage || 'Nuevo lead';
+  if (stage === 'No contesto') return 'Seguimiento';
+  if (stage === 'Nuevo Lead' || stage === 'Nuevo lead') return 'Nueva solicitud';
+  if (stage === 'Cualificando' || stage === 'Interesado') return 'Validando vehiculo';
+  if (stage === 'Cita agendada') return 'Servicio agendado';
+  return stage || 'Nueva solicitud';
 }
 
 export default function Pipeline() {
@@ -105,7 +107,7 @@ export default function Pipeline() {
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <h2 className="text-2xl font-black text-brand-navy">Pipeline</h2>
-          <p className="mt-1 text-slate-500">Mueve cada oportunidad por etapa y mantente claro en el seguimiento.</p>
+          <p className="mt-1 text-slate-500">Mueve cada servicio, pieza o cotizacion por su etapa real.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isManager && (
@@ -144,7 +146,7 @@ export default function Pipeline() {
                         <Link to={`/leads/${lead.id}`} className="font-bold text-brand-navy hover:text-brand-blue">
                           {lead.full_name || 'Sin nombre'}
                         </Link>
-                        <p className="mt-1 text-sm text-slate-500">{lead.property_city || lead.phone || 'Sin ciudad'}</p>
+                        <p className="mt-1 text-sm text-slate-500">{lead.requested_part || lead.requested_service || lead.service_interest || lead.phone || 'Sin detalle'}</p>
                         <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{lead.sales_reps?.name || lead.assigned_to || 'Sin asignar'}</p>
                       </div>
                       <LeadTemperatureBadge temperature={lead.lead_temperature} />
@@ -179,7 +181,7 @@ export default function Pipeline() {
                 ))}
                 {!leadsByStage[stage]?.length && (
                   <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center text-sm text-slate-400">
-                    Sin leads en esta etapa
+                    Sin oportunidades en esta etapa
                   </div>
                 )}
               </div>

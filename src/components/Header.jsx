@@ -27,7 +27,7 @@ export default function Header() {
               {APP_NAME}
             </Link>
           </div>
-          <p className="hidden text-sm text-slate-500 lg:block">Organizacion</p>
+          <p className="hidden text-sm text-slate-500 lg:block">Operacion</p>
           <h1 className="hidden truncate text-xl font-bold text-brand-navy lg:block">
             {organization?.name || 'Holeshot'}
           </h1>
