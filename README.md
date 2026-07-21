@@ -1,64 +1,34 @@
-﻿# Holeshot CRM
+# Holeshot CRM ready v14
 
-Version independiente del CRM de Holeshot, lista para subir a GitHub, conectar con Vercel y guardar datos en Supabase.
-
-## Que incluye
-
-- Tablero general con oportunidades, tareas y servicios activos.
-- Pipeline de ventas.
-- Pipeline de servicios y postventa.
-- Clientes.
-- Seguimientos.
-- Reportes rapidos.
-- Exportacion JSON para respaldo.
-- Exportacion CSV para revisar datos en Excel o Google Sheets.
-- Importacion JSON para restaurar datos.
-- Login con Supabase Auth.
-- Guardado en base de datos Supabase.
-
-## Importante
-
-Esta version guarda los datos en Supabase. Antes de usarla oficialmente, ejecuta `supabase-schema.sql` en el SQL Editor del proyecto Supabase.
-
-En Supabase, crea los usuarios del equipo desde Authentication. La app usa email y contrasena.
+Copia lista para usar del CRM de Holeshot. Esta version incluye el arreglo para evitar que el guardado en Supabase se quede congelado en "Guardando en Supabase..." y tambien incluye configuracion de Vercel para no guardar cache vieja.
 
 ## Abrir localmente
 
 Abre `index.html` en el navegador.
 
-## Subir a GitHub
+## Subir a Vercel o GitHub
 
-Desde esta carpeta:
+Sube todos los archivos de esta carpeta. No elimines `supabase-timeout-14.js`, porque ese archivo ayuda a que Supabase no deje la pantalla pegada si tarda demasiado.
 
-```powershell
-git init
-git branch -M main
-git add .gitignore README.md index.html styles.css app.js logo.png vercel.json supabase-schema.sql supabase-add-brand-model.sql
-git commit -m "Crear CRM Holeshot"
-git remote add origin https://github.com/TU_USUARIO/holeshot-crm.git
-git push -u origin main
-```
+Archivos principales:
 
-Reemplaza `TU_USUARIO` por tu usuario real de GitHub.
-
-## Vercel
-
-1. Entra a Vercel.
-2. Importa el repo `holeshot-crm`.
-3. Deja la configuracion como proyecto estatico.
-4. Publica.
-
-No hace falta instalar dependencias ni correr build.
+- `index.html`
+- `styles.css`
+- `app.js`
+- `supabase-timeout-14.js`
+- `logo.png`
+- `vercel.json`
+- `supabase-schema.sql`
+- `supabase-add-brand-model.sql`
 
 ## Supabase
 
-1. Entra al proyecto Supabase.
-2. Abre SQL Editor.
-3. Pega y ejecuta el contenido de `supabase-schema.sql`.
-4. Si ya tenias la base creada, ejecuta tambien `supabase-add-brand-model.sql` para agregar marca y modelo.
-4. Ve a Authentication.
-5. Crea los usuarios que podran entrar al CRM.
-6. Publica el proyecto en Vercel.
+Si la base esta nueva, ejecuta `supabase-schema.sql` en el SQL Editor de Supabase.
 
+Si ya tenias la base creada, ejecuta tambien `supabase-add-brand-model.sql` para asegurar que existan los campos de marca y modelo.
 
+Los usuarios se crean desde Authentication en Supabase. La app usa email y contrasena.
 
+## Nota importante
+
+Esta copia no usa `save-guard.js`. Si ves ese archivo en otra carpeta anterior, no lo subas con esta version.
