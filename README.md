@@ -1,6 +1,6 @@
-# Holeshot CRM ready v14
+# Holeshot CRM ready v15
 
-Copia lista para usar del CRM de Holeshot. Esta version incluye el arreglo para evitar que el guardado en Supabase se quede congelado en "Guardando en Supabase..." y tambien incluye configuracion de Vercel para no guardar cache vieja.
+Copia lista para usar del CRM de Holeshot. Esta version incluye un guardado directo para ventas, timeouts reales para Supabase y configuracion de Vercel para no guardar cache vieja.
 
 ## Abrir localmente
 
@@ -8,14 +8,15 @@ Abre `index.html` en el navegador.
 
 ## Subir a Vercel o GitHub
 
-Sube todos los archivos de esta carpeta. No elimines `supabase-timeout-14.js`, porque ese archivo ayuda a que Supabase no deje la pantalla pegada si tarda demasiado.
+Sube todos los archivos de esta carpeta. No elimines `supabase-timeout-v15.js` ni `holeshot-lead-save-v15.js`, porque esos archivos evitan que el formulario de venta se quede pegado si Supabase tarda demasiado.
 
 Archivos principales:
 
 - `index.html`
 - `styles.css`
 - `app.js`
-- `supabase-timeout-14.js`
+- `supabase-timeout-v15.js`
+- `holeshot-lead-save-v15.js`
 - `logo.png`
 - `vercel.json`
 - `supabase-schema.sql`
