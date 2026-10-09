@@ -72,7 +72,7 @@ export default async function handler(req,res) {
     if(action==='contacts') {
       const query=String(body.search||'').trim().slice(0,100);
       if(query.length<2) return res.status(400).json({error:'Escribe al menos dos caracteres.'});
-      const result=await books(access,'contacts?'+new URLSearchParams({search_text:query,contact_type:'customer',per_page:'100'}));
+      const result=await books(access,'contacts?'+new URLSearchParams({contact_name_contains:query,contact_type:'customer',per_page:'100'}));
       return res.json({contacts:(result.contacts||[]).map(c=>({id:String(c.contact_id),name:c.contact_name,email:c.email,phone:c.phone||c.mobile})),more:!!result.page_context?.has_more_page});
     }
     if(['link','documents','create'].includes(action)) {
