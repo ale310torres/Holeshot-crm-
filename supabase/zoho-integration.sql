@@ -49,6 +49,7 @@ alter table public.zoho_documents enable row level security;
 -- Tokens and OAuth state are accessible only to the server service role.
 revoke all on public.zoho_connections, public.zoho_oauth_states from anon, authenticated;
 grant all on public.zoho_connections, public.zoho_oauth_states, public.zoho_customer_links, public.zoho_documents to service_role;
+revoke all on public.zoho_customer_links, public.zoho_documents from anon, authenticated;
 grant select on public.zoho_customer_links, public.zoho_documents to authenticated;
 drop policy if exists zoho_links_read on public.zoho_customer_links;
 drop policy if exists zoho_documents_read on public.zoho_documents;
