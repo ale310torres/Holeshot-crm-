@@ -51,7 +51,7 @@ export default async function handler(req,res) {
       if (!credentials.refresh_token) throw new Error('Refresh token missing');
       const organizations=await books(credentials.access_token,'organizations');
       if (!organizations.organizations?.some(o=>String(o.organization_id)===ZOHO_ORG)) throw new Error('Wrong Zoho organization');
-      const saved=await client.from('zoho_connections').upsert({organization_id:used.data.organization_id,zoho_organization_id:ZOHO_ORG,encrypted_refresh_token:cipher(credentials.refresh_token)});
+      const saved=await client.from('zoho_connections').upsert({organization_id:used.data.organization_id,zoho_organization_id:ZOHO_ORG,encrypted_refresh_token:cipher(credentials.refresh_token),encrypted_access_token:cipher(credentials.access_token),access_token_expires_at:new Date(Date.now()+Number(credentials.expires_in||3600)*1000).toISOString()});
       if (saved.error) throw new Error('Connection persistence failed');
       return res.redirect(303,`${ORIGIN}/?zoho=connected`);
     }
@@ -67,7 +67,20 @@ export default async function handler(req,res) {
     const connection=await client.from('zoho_connections').select('*').eq('organization_id',profile.organization_id).single();
     if(action==='status') return res.json({connected:!!connection.data&&!connection.error});
     if (connection.error) return res.status(409).json({error:'Primero conecta Zoho Books.'});
-    const access=(await token({grant_type:'refresh_token',refresh_token:cipher(connection.data.encrypted_refresh_token,true)})).access_token;
+    let access;
+    if(connection.data.encrypted_access_token && Date.parse(connection.data.access_token_expires_at)>Date.now()+60000){
+      access=cipher(connection.data.encrypted_access_token,true);
+    }else{
+      const now=new Date().toISOString();
+      const lease=await client.from('zoho_connections').update({token_refresh_until:new Date(Date.now()+30000).toISOString()}).eq('organization_id',profile.organization_id).lt('token_refresh_until',now).select('organization_id').maybeSingle();
+      if(lease.error||!lease.data) return res.status(409).json({error:'La conexión se está renovando. Espera unos segundos y actualiza.'});
+      try{
+        const refreshed=await token({grant_type:'refresh_token',refresh_token:cipher(connection.data.encrypted_refresh_token,true)});
+        access=refreshed.access_token;
+        const saved=await client.from('zoho_connections').update({encrypted_access_token:cipher(access),access_token_expires_at:new Date(Date.now()+Number(refreshed.expires_in||3600)*1000).toISOString(),token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',profile.organization_id);
+        if(saved.error) throw new Error('Token persistence failed');
+      }catch(error){await client.from('zoho_connections').update({token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',profile.organization_id);throw error;}
+    }
     const body=req.body||{};
     if(action==='contacts') {
       const query=String(body.search||'').trim().slice(0,100);

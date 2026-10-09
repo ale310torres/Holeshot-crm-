@@ -5,6 +5,9 @@ create table if not exists public.zoho_connections (
   encrypted_refresh_token text not null,
   connected_at timestamptz not null default now()
 );
+alter table public.zoho_connections add column if not exists encrypted_access_token text;
+alter table public.zoho_connections add column if not exists access_token_expires_at timestamptz;
+alter table public.zoho_connections add column if not exists token_refresh_until timestamptz not null default '1970-01-01T00:00:00Z';
 create table if not exists public.zoho_oauth_states (
   state_hash text primary key,
   organization_id uuid not null references public.organizations(id),
