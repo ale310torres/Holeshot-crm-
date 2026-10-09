@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Mail, MessageCircle, Phone, Plus, Save } from 'lucide-react';
 import ActivityTimeline from '../components/ActivityTimeline.jsx';
+import ZohoDocuments from '../components/ZohoDocuments.jsx';
 import LeadStageBadge from '../components/LeadStageBadge.jsx';
 import LeadTemperatureBadge from '../components/LeadTemperatureBadge.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -210,6 +211,8 @@ export default function LeadDetail() {
 
       {message && <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm font-semibold text-brand-blue">{message}</div>}
 
+      {isManager && <ZohoDocuments key={id} leadId={id} />}
+
       <div className="grid gap-5 xl:grid-cols-[1fr_400px]">
         <section className="space-y-5">
           <Panel title="Contacto del cliente">
@@ -341,7 +344,6 @@ function TextField({ label, value, onChange }) {
     </label>
   );
 }
-
 
 
 
