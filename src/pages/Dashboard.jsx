@@ -27,8 +27,8 @@ export default function Dashboard() {
     async function loadIntake() {
       const now = new Date();
       const results = await Promise.all([1, 7, 30].map((days) =>
-        supabase.from('leads')
-          .select('id', { count: 'exact', head: true })
+        supabase.from('leads')          .select('id', { count: 'exact', head: true })
+          .or('source.is.null,source.neq.Zoho Books')
           .eq('organization_id', organizationId)
           .gte('created_at', new Date(now.getTime() - days * 86400000).toISOString())
           .lte('created_at', now.toISOString())
@@ -49,8 +49,8 @@ export default function Dashboard() {
       setError('');
       const [leadResult, taskResult, repResult] = await Promise.all([
         supabase
-          .from('leads')
-          .select('*, sales_reps(id, name, initials)')
+          .from('leads')          .select('*, sales_reps(id, name, initials)')
+          .or('source.is.null,source.neq.Zoho Books')
           .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabase
@@ -252,6 +252,7 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 
 

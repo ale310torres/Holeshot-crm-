@@ -32,8 +32,8 @@ export default function Pipeline() {
     setError('');
     const [leadResult, repResult] = await Promise.all([
       supabase
-        .from('leads')
-        .select('*, sales_reps(id, name, initials)')
+        .from('leads')        .select('*, sales_reps(id, name, initials)')
+          .or('source.is.null,source.neq.Zoho Books')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false }),
       supabase
@@ -83,6 +83,7 @@ export default function Pipeline() {
     setError('');
     const { error: updateError } = await supabase
       .from('leads')
+          .or('source.is.null,source.neq.Zoho Books')
       .update({ stage: nextStage, payment_status: paymentForStage(nextStage, lead.payment_status), updated_at: new Date().toISOString() })
       .eq('id', lead.id)
       .eq('organization_id', organizationId);
@@ -194,6 +195,7 @@ export default function Pipeline() {
     </div>
   );
 }
+
 
 
 
