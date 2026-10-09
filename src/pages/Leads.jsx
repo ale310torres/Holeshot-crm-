@@ -185,7 +185,7 @@ export default function Leads() {
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div><h3 className="font-bold text-brand-navy">{intake?'Leads recibidos':'Período de entrada'}</h3>
-          <p className="text-sm text-slate-500">{intake?`${filteredLeads.length} leads en las últimas ${intake.days===1?'24 horas':intake.days+' días'}. Incluye todas las etapas; excluye importaciones de Zoho.`:'Selecciona un período para ver quién entró.'}</p>
+          <p className="text-sm text-slate-500">{intake?(loading?'Cargando leads del período…':`${filteredLeads.length} leads · ${intake.days===1?'Últimas 24 horas':'Últimos '+intake.days+' días'}. Incluye todas las etapas; excluye importaciones de Zoho.`):'Selecciona un período para ver quién entró.'}</p>
           {intake&&<p className="text-xs text-slate-500">Desde {new Date(intake.start).toLocaleString('es-PR',{timeZone:'America/La_Paz'})} hasta {new Date(intake.end).toLocaleString('es-PR',{timeZone:'America/La_Paz'})}.</p>}
         </div>
         <select aria-label="Período de entrada" value={intake?.days||''} onChange={event=>setSearchParams(event.target.value?{days:event.target.value,asOf:new Date().toISOString()}:{})} className="rounded-lg border border-slate-200 px-4 py-3">
@@ -316,6 +316,7 @@ function TextArea({ label, value, onChange }) {
     </label>
   );
 }
+
 
 
 
