@@ -9,8 +9,22 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store, max-age=0, must-revalidate"
+        }
       ]
     }
-  ]
+  ],
+  "crons": [
+    {
+      "schedule": "0 10 * * *",
+      "path": "/api/zoho/scheduled-sync"
+    }
+  ],
+  "functions": {
+    "api/zoho/[action].js": {
+      "maxDuration": 60
+    }
+  }
 }

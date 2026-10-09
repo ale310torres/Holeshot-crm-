@@ -1,3 +1,4 @@
+import ZohoSync from '../components/ZohoSync.jsx';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import LeadTable from '../components/LeadTable.jsx';
@@ -174,6 +175,7 @@ export default function Leads() {
         </button>
       </div>
 
+      {isManager && <ZohoSync organizationId={organizationId} onUpdated={loadLeads} />}
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
       <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
@@ -299,6 +301,7 @@ function TextArea({ label, value, onChange }) {
     </label>
   );
 }
+
 
 
 

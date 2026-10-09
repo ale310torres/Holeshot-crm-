@@ -1,3 +1,4 @@
+import {syncOrganization,validCronAuthorization} from '../../api-lib/zoho-sync.js';
 import crypto from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 
@@ -55,6 +56,15 @@ export default async function handler(req,res) {
       if (saved.error) throw new Error('Connection persistence failed');
       return res.redirect(303,`${ORIGIN}/?zoho=connected`);
     }
+    if(action==='scheduled-sync'){
+      if(req.method!=='GET')return res.status(405).end();
+      if(!validCronAuthorization(req.headers.authorization,process.env.CRON_SECRET))return res.status(401).json({error:'Acceso no autorizado.'});
+      const connections=await client.from('zoho_connections').select('*').eq('zoho_organization_id',ZOHO_ORG);
+      if(connections.error||connections.data?.length!==1)throw new Error('Scheduled connection unavailable');
+      const connection=connections.data[0];
+      const access=await getAccess(client,connection.organization_id,connection);
+      return res.json(await syncOrganization(client,connection.organization_id,access,books,documentRow));
+    }
     const profile=await manager(req,client);
     if (req.method!=='POST') return res.status(405).end();
     if (req.headers.origin && req.headers.origin!==ORIGIN) return res.status(403).end();
@@ -65,22 +75,10 @@ export default async function handler(req,res) {
       return res.json({url:'https://accounts.zoho.com/oauth/v2/auth?'+new URLSearchParams({scope:SCOPES,client_id:env('ZOHO_CLIENT_ID'),response_type:'code',access_type:'offline',prompt:'consent',redirect_uri:CALLBACK,state})});
     }
     const connection=await client.from('zoho_connections').select('*').eq('organization_id',profile.organization_id).single();
-    if(action==='status') return res.json({connected:!!connection.data&&!connection.error});
+    if(action==='status') return res.json({connected:!!connection.data&&!connection.error,background_enabled:!!process.env.CRON_SECRET&&process.env.CRON_SECRET.length>=32});
     if (connection.error) return res.status(409).json({error:'Primero conecta Zoho Books.'});
-    let access;
-    if(connection.data.encrypted_access_token && Date.parse(connection.data.access_token_expires_at)>Date.now()+60000){
-      access=cipher(connection.data.encrypted_access_token,true);
-    }else{
-      const now=new Date().toISOString();
-      const lease=await client.from('zoho_connections').update({token_refresh_until:new Date(Date.now()+30000).toISOString()}).eq('organization_id',profile.organization_id).lt('token_refresh_until',now).select('organization_id').maybeSingle();
-      if(lease.error||!lease.data) return res.status(409).json({error:'La conexión se está renovando. Espera unos segundos y actualiza.'});
-      try{
-        const refreshed=await token({grant_type:'refresh_token',refresh_token:cipher(connection.data.encrypted_refresh_token,true)});
-        access=refreshed.access_token;
-        const saved=await client.from('zoho_connections').update({encrypted_access_token:cipher(access),access_token_expires_at:new Date(Date.now()+Number(refreshed.expires_in||3600)*1000).toISOString(),token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',profile.organization_id);
-        if(saved.error) throw new Error('Token persistence failed');
-      }catch(error){await client.from('zoho_connections').update({token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',profile.organization_id);throw error;}
-    }
+    const access=await getAccess(client,profile.organization_id,connection.data);
+    if(action==='sync') return res.json(await syncOrganization(client,profile.organization_id,access,books,documentRow));
     const body=req.body||{};
     if(action==='contacts') {
       const query=String(body.search||'').trim().slice(0,100);
@@ -136,4 +134,23 @@ export default async function handler(req,res) {
   }
 }
 function documentRow(org,type,d){return {organization_id:org,zoho_document_id:String(d[`${type}_id`]),document_type:type,zoho_contact_id:String(d.customer_id),document_number:d[`${type}_number`],document_date:d.date,status:d.status,currency_code:d.currency_code,total:d.total,balance:d.balance??null,synced_at:new Date().toISOString()};}
+
+
+async function getAccess(client,org,connection){
+    let access;
+    if(connection.encrypted_access_token && Date.parse(connection.access_token_expires_at)>Date.now()+60000){
+      access=cipher(connection.encrypted_access_token,true);
+    }else{
+      const now=new Date().toISOString();
+      const lease=await client.from('zoho_connections').update({token_refresh_until:new Date(Date.now()+30000).toISOString()}).eq('organization_id',org).lt('token_refresh_until',now).select('organization_id').maybeSingle();
+      if(lease.error||!lease.data) throw new Error('Token refresh busy');
+      try{
+        const refreshed=await token({grant_type:'refresh_token',refresh_token:cipher(connection.encrypted_refresh_token,true)});
+        access=refreshed.access_token;
+        const saved=await client.from('zoho_connections').update({encrypted_access_token:cipher(access),access_token_expires_at:new Date(Date.now()+Number(refreshed.expires_in||3600)*1000).toISOString(),token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',org);
+        if(saved.error) throw new Error('Token persistence failed');
+      }catch(error){await client.from('zoho_connections').update({token_refresh_until:'1970-01-01T00:00:00Z'}).eq('organization_id',org);throw error;}
+    }
+ return access;
+}
 
