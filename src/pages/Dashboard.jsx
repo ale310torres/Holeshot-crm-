@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MetricCard from '../components/MetricCard.jsx';
-import { isConverted, isCompleted } from '../utils/conversion.js';
+import { isConverted, isCompleted, customerConversion } from '../utils/conversion.js';
 import LeadStageBadge from '../components/LeadStageBadge.jsx';
 import LeadTemperatureBadge from '../components/LeadTemperatureBadge.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
@@ -13,6 +13,10 @@ import { formatLeadInterest, formatShortDate, isOverdue, percentage } from '../u
 export default function Dashboard() {
   const { organizationId, profile, role, isManager } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [allClients,setAllClients]=useState([]);
+  const [zohoLinks,setZohoLinks]=useState([]);
+  const [zohoDocs,setZohoDocs]=useState([]);
+  const [conversionError,setConversionError]=useState(false);
   const [tasks, setTasks] = useState([]);
   const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -47,10 +51,9 @@ export default function Dashboard() {
     async function loadDashboard() {
       setLoading(true);
       setError('');
-      const [leadResult, taskResult, repResult] = await Promise.all([
+      const [leadResult, taskResult, repResult,linkResult,docResult] = await Promise.all([
         supabase
-          .from('leads')          .select('*, sales_reps(id, name, initials)')
-          .or('source.is.null,source.neq.Zoho Books')
+          .from('leads').select('*, sales_reps(id, name, initials)')
           .eq('organization_id', organizationId)
           .order('created_at', { ascending: false }),
         supabase
@@ -64,10 +67,20 @@ export default function Dashboard() {
           .eq('organization_id', organizationId)
           .eq('active', true)
           .order('name', { ascending: true }),
+        isManager ? supabase.from('zoho_customer_links').select('lead_id,zoho_contact_id').eq('organization_id',organizationId) : Promise.resolve({data:[]}),
+        isManager ? supabase.from('zoho_documents').select('zoho_contact_id,document_type,status,total').eq('organization_id',organizationId).eq('document_type','invoice').eq('status','paid') : Promise.resolve({data:[]}),
       ]);
 
       if (leadResult.error) setError('No se pudieron cargar las metricas.');
-      else setLeads(leadResult.data || []);
+      else {
+        const clients=leadResult.data||[];
+        const paid=new Set((docResult.data||[]).filter(d=>Number(d.total)>0).map(d=>d.zoho_contact_id));
+        const paidLeads=new Set((linkResult.data||[]).filter(l=>paid.has(l.zoho_contact_id)).map(l=>l.lead_id));
+        const enriched=clients.map(l=>({...l,zoho_paid:paidLeads.has(l.id)}));
+        setAllClients(enriched);setLeads(enriched.filter(l=>l.source!=='Zoho Books'));
+        setZohoLinks(linkResult.data||[]);setZohoDocs(docResult.data||[]);
+      }
+      setConversionError(!!(leadResult.error||linkResult.error||docResult.error));
 
       if (!taskResult.error) setTasks(taskResult.data || []);
       if (!repResult.error) setSalesReps(repResult.data || []);
@@ -77,6 +90,7 @@ export default function Dashboard() {
     if (organizationId) loadDashboard();
   }, [organizationId]);
 
+  const customerMetrics=useMemo(()=>customerConversion(allClients,zohoLinks,zohoDocs),[allClients,zohoLinks,zohoDocs]);
   const metrics = useMemo(() => {
     const total = leads.length;
     const won = leads.filter(isConverted).length;
@@ -157,6 +171,7 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {conversionError && <p role="alert" className="text-sm text-brand-danger">No se pudo verificar la conversión con los pagos de Zoho. Actualiza la página para reintentar.</p>}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Oportunidades" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis casos'} tone="navy" />
         <MetricCard title="Solicitudes nuevas" value={metrics.newLeads} helper="Entrantes" tone="blue" />
@@ -166,10 +181,10 @@ export default function Dashboard() {
         <MetricCard title="Urgentes" value={metrics.hot} helper="Prioridad" tone="red" />
         <MetricCard title="Tareas pendientes" value={metrics.pendingTasks} helper="Hoy" tone="cyan" />
         <MetricCard title="Tareas vencidas" value={metrics.overdueTasks} helper="Atencion" tone="red" />
-        <MetricCard title="Clientes convertidos" value={metrics.won} helper="Depósito o pago recibido" tone="green" />
+        <MetricCard title="Clientes convertidos" value={conversionError ? '—' : customerMetrics.converted} helper="Clientes únicos · depósito o factura pagada" tone="green" />
         <MetricCard title="Trabajos completados" value={metrics.completed} helper="Terminados y pagados" tone="green" />
         <MetricCard title="Ganados por revisar" value={metrics.legacyWon} helper="Casos antiguos sin pago clasificado" tone="yellow" />
-        <MetricCard title="Conversion" value={percentage(metrics.conversion)} helper="Ganadas" tone="cyan" />
+        <MetricCard title="Conversion" value={conversionError ? '—' : percentage(customerMetrics.percentage)} helper={`${customerMetrics.converted} de ${customerMetrics.total} clientes únicos · incluye Zoho`} tone="cyan" />
       </section>
 
       {isManager && (
@@ -252,6 +267,7 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 
 
