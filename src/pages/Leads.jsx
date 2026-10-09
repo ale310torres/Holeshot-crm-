@@ -1,5 +1,7 @@
 import ZohoSync from '../components/ZohoSync.jsx';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState,useRef } from 'react';
+import {useSearchParams} from 'react-router-dom';
+import {intakeWindow,loadIntakeLeads} from '../utils/intake.js';
 import { Plus, X } from 'lucide-react';
 import LeadTable from '../components/LeadTable.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -32,6 +34,10 @@ const emptyForm = {
 };
 
 export default function Leads() {
+  const [searchParams,setSearchParams]=useSearchParams();
+  const period=searchParams.get('days'),asOf=searchParams.get('asOf');
+  const intake=useMemo(()=>intakeWindow(period,asOf),[period,asOf]);
+  const loadVersion=useRef(0);
   const { organizationId, organization, user, profile, salesRepId, isManager } = useAuth();
   const [leads, setLeads] = useState([]);
   const [salesReps, setSalesReps] = useState([]);
@@ -42,13 +48,11 @@ export default function Leads() {
   const [filters, setFilters] = useState({ search: '', stage: '', lead_temperature: '', source: '' });
 
   async function loadLeads() {
+    const version=++loadVersion.current;
     setLoading(true);
+    setError('');
     const [leadResult, repResult] = await Promise.all([
-      supabase
-        .from('leads')
-        .select('*, sales_reps(id, name, initials)')
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false }),
+      loadIntakeLeads(supabase,organizationId,intake).then(data=>({data})).catch(error=>({error})),
       supabase
         .from('sales_reps')
         .select('*')
@@ -57,7 +61,8 @@ export default function Leads() {
         .order('name', { ascending: true }),
     ]);
 
-    if (leadResult.error) setError('No se pudieron cargar las oportunidades.');
+    if(version!==loadVersion.current)return;
+    if (leadResult.error) {setError('No se pudieron cargar las oportunidades.');setLeads([]);}
     else setLeads(leadResult.data || []);
     if (!repResult.error) setSalesReps(repResult.data || []);
     setLoading(false);
@@ -65,7 +70,7 @@ export default function Leads() {
 
   useEffect(() => {
     if (organizationId) loadLeads();
-  }, [organizationId]);
+  }, [organizationId,intake]);
 
   const filteredLeads = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
@@ -178,6 +183,16 @@ export default function Leads() {
       {isManager && <ZohoSync organizationId={organizationId} onUpdated={loadLeads} />}
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
+      <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div><h3 className="font-bold text-brand-navy">{intake?'Leads recibidos':'Período de entrada'}</h3>
+          <p className="text-sm text-slate-500">{intake?`${filteredLeads.length} leads en las últimas ${intake.days===1?'24 horas':intake.days+' días'}. Incluye todas las etapas; excluye importaciones de Zoho.`:'Selecciona un período para ver quién entró.'}</p>
+          {intake&&<p className="text-xs text-slate-500">Desde {new Date(intake.start).toLocaleString('es-PR',{timeZone:'America/La_Paz'})} hasta {new Date(intake.end).toLocaleString('es-PR',{timeZone:'America/La_Paz'})}.</p>}
+        </div>
+        <select aria-label="Período de entrada" value={intake?.days||''} onChange={event=>setSearchParams(event.target.value?{days:event.target.value,asOf:new Date().toISOString()}:{})} className="rounded-lg border border-slate-200 px-4 py-3">
+          <option value="">Todos los períodos</option><option value="1">Últimas 24 horas</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option>
+        </select>
+      </section>
+
       <section className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <input
           value={filters.search}
@@ -199,7 +214,7 @@ export default function Leads() {
         </select>
       </section>
 
-      {loading ? <p className="text-slate-600">Cargando oportunidades...</p> : <LeadTable leads={filteredLeads} onMarkContacted={handleMarkContacted} businessName={organization?.name} />}
+      {loading ? <p className="text-slate-600">Cargando oportunidades...</p> : intake&&!filteredLeads.length?<p className="rounded-lg border border-slate-200 bg-white p-5">No hay leads para este período y los filtros seleccionados.</p>:<LeadTable leads={filteredLeads} onMarkContacted={handleMarkContacted} businessName={organization?.name} showReceivedTime={!!intake} />}
 
       {showForm && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-navy/50 px-4 py-8">

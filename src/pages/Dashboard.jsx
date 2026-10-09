@@ -21,6 +21,7 @@ export default function Dashboard() {
   const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [intakeAsOf,setIntakeAsOf]=useState('');
   const [leadIntake, setLeadIntake] = useState(null);
   const [intakeError, setIntakeError] = useState(false);
 
@@ -40,6 +41,7 @@ export default function Dashboard() {
       if (!active) return;
       const failed = results.some((result) => result.error || result.count === null);
       setIntakeError(failed);
+      if(!failed)setIntakeAsOf(now.toISOString());
       setLeadIntake(failed ? null : results.map((result) => result.count));
     }
     loadIntake();
@@ -165,9 +167,9 @@ export default function Dashboard() {
         </div>
         {intakeError && <p role="alert" className="text-sm text-brand-danger">No se pudieron cargar los leads recibidos. Se intentará de nuevo automáticamente.</p>}
         <div className="grid gap-4 sm:grid-cols-3">
-          <MetricCard title="Últimas 24 horas" value={leadIntake?.[0] ?? '—'} helper="1 día" tone="blue" />
-          <MetricCard title="Últimos 7 días" value={leadIntake?.[1] ?? '—'} helper="1 semana" tone="cyan" />
-          <MetricCard title="Últimos 30 días" value={leadIntake?.[2] ?? '—'} helper="1 mes · 30 días" tone="navy" />
+          <Link to={`/leads?days=1&asOf=${encodeURIComponent(intakeAsOf)}`} aria-label="Ver leads de las últimas 24 horas" className="rounded-lg outline-offset-4 hover:ring-2 hover:ring-brand-blue"><MetricCard title="Últimas 24 horas" value={leadIntake?.[0] ?? '—'} helper="Ver leads" tone="blue" /></Link>
+          <Link to={`/leads?days=7&asOf=${encodeURIComponent(intakeAsOf)}`} aria-label="Ver leads de los últimos 7 días" className="rounded-lg outline-offset-4 hover:ring-2 hover:ring-brand-blue"><MetricCard title="Últimos 7 días" value={leadIntake?.[1] ?? '—'} helper="Ver leads" tone="cyan" /></Link>
+          <Link to={`/leads?days=30&asOf=${encodeURIComponent(intakeAsOf)}`} aria-label="Ver leads de los últimos 30 días" className="rounded-lg outline-offset-4 hover:ring-2 hover:ring-brand-blue"><MetricCard title="Últimos 30 días" value={leadIntake?.[2] ?? '—'} helper="Ver leads" tone="navy" /></Link>
         </div>
       </section>
 
@@ -267,6 +269,7 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 
 

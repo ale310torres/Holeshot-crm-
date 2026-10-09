@@ -5,7 +5,7 @@ import LeadStageBadge from './LeadStageBadge.jsx';
 import LeadTemperatureBadge from './LeadTemperatureBadge.jsx';
 import { formatCurrency, formatLeadInterest, formatShortDate, formatVehicleSummary, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
-export default function LeadTable({ leads, onMarkContacted, businessName }) {
+export default function LeadTable({ leads, onMarkContacted, businessName,showReceivedTime=false }) {
   if (!leads.length) {
     return (
       <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
@@ -48,7 +48,7 @@ export default function LeadTable({ leads, onMarkContacted, businessName }) {
                 <td className="px-4 py-4 text-sm font-semibold text-slate-700">{lead.sales_reps?.name || lead.assigned_to || 'Sin asignar'}</td>
                 <td className="px-4 py-4"><LeadStageBadge stage={lead.stage} /></td>
                 <td className="max-w-[220px] truncate px-4 py-4 text-sm text-slate-600">{lead.next_action || 'Sin proxima accion'}</td>
-                <td className="px-4 py-4 text-sm text-slate-500">{formatShortDate(lead.created_at)}</td>
+                <td className="px-4 py-4 text-sm text-slate-500">{showReceivedTime?new Date(lead.created_at).toLocaleString('es-PR',{timeZone:'America/La_Paz'}):formatShortDate(lead.created_at)}</td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <Link to={`/leads/${lead.id}`} className="rounded-lg bg-brand-navy p-2 text-white" title="Ver detalle">
