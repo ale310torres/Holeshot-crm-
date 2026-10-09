@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MetricCard from '../components/MetricCard.jsx';
+import { isConverted, isCompleted } from '../utils/conversion.js';
 import LeadStageBadge from '../components/LeadStageBadge.jsx';
 import LeadTemperatureBadge from '../components/LeadTemperatureBadge.jsx';
 import RoleBadge from '../components/RoleBadge.jsx';
@@ -78,7 +79,7 @@ export default function Dashboard() {
 
   const metrics = useMemo(() => {
     const total = leads.length;
-    const won = leads.filter((lead) => lead.stage === 'Cerrado ganado').length;
+    const won = leads.filter(isConverted).length;
     const pendingTasks = tasks.filter((task) => task.status === 'pending').length;
     const overdueTasks = tasks.filter((task) => task.status === 'pending' && isOverdue(task.due_at)).length;
 
@@ -91,6 +92,8 @@ export default function Dashboard() {
       hot: leads.filter((lead) => lead.lead_temperature === 'Caliente' || lead.urgency === 'Alta').length,
       followUp: leads.filter((lead) => ['Seguimiento', 'Esperando piezas'].includes(lead.stage) || lead.next_follow_up_at).length,
       won,
+      completed: leads.filter(isCompleted).length,
+      legacyWon: leads.filter((lead) => lead.stage === 'Cerrado ganado' && !isConverted(lead)).length,
       lost: leads.filter((lead) => lead.stage === 'Cerrado perdido').length,
       conversion: total ? (won / total) * 100 : 0,
       pendingTasks,
@@ -102,7 +105,7 @@ export default function Dashboard() {
     return salesReps.map((rep) => {
       const repLeads = leads.filter((lead) => lead.assigned_rep_id === rep.id);
       const repTasks = tasks.filter((task) => task.assigned_rep_id === rep.id);
-      const won = repLeads.filter((lead) => lead.stage === 'Cerrado ganado').length;
+      const won = repLeads.filter(isConverted).length;
       return {
         ...rep,
         totalLeads: repLeads.length,
@@ -163,7 +166,9 @@ export default function Dashboard() {
         <MetricCard title="Urgentes" value={metrics.hot} helper="Prioridad" tone="red" />
         <MetricCard title="Tareas pendientes" value={metrics.pendingTasks} helper="Hoy" tone="cyan" />
         <MetricCard title="Tareas vencidas" value={metrics.overdueTasks} helper="Atencion" tone="red" />
-        <MetricCard title="Cerrados ganados" value={metrics.won} helper="Ventas" tone="green" />
+        <MetricCard title="Clientes convertidos" value={metrics.won} helper="Depósito o pago recibido" tone="green" />
+        <MetricCard title="Trabajos completados" value={metrics.completed} helper="Terminados y pagados" tone="green" />
+        <MetricCard title="Ganados por revisar" value={metrics.legacyWon} helper="Casos antiguos sin pago clasificado" tone="yellow" />
         <MetricCard title="Conversion" value={percentage(metrics.conversion)} helper="Ganadas" tone="cyan" />
       </section>
 

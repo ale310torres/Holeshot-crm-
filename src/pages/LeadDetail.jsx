@@ -20,6 +20,8 @@ import {
 } from '../utils/constants.js';
 import { formatDate, formatVehicleSummary, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
+import { paymentForStage } from '../utils/conversion.js';
+
 function normalizeStage(stage) {
   if (stage === 'Nuevo Lead' || stage === 'Nuevo lead') return 'Nueva solicitud';
   if (stage === 'No contesto') return 'Seguimiento';
@@ -115,6 +117,7 @@ export default function LeadDetail() {
     const payload = {
       ...editableFields,
       stage: nextStage,
+      payment_status: paymentForStage(nextStage, form.payment_status),
       vehicle_year: editableFields.vehicle_year ? Number(editableFields.vehicle_year) : null,
       engine_cc: editableFields.engine_cc ? Number(editableFields.engine_cc) : null,
       estimate_amount: editableFields.estimate_amount ? Number(editableFields.estimate_amount) : null,
@@ -130,8 +133,8 @@ export default function LeadDetail() {
     if (error) {
       setMessage('No se pudieron guardar los cambios.');
     } else {
-      setLead({ ...form, stage: nextStage });
-      setForm({ ...form, stage: nextStage });
+      setLead({ ...form, ...payload });
+      setForm({ ...form, ...payload });
       setMessage('Cambios guardados correctamente.');
       await logActivity('lead_updated', 'Oportunidad actualizada desde el CRM.');
       if (previousStage !== nextStage) {
@@ -338,6 +341,7 @@ function TextField({ label, value, onChange }) {
     </label>
   );
 }
+
 
 
 

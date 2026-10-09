@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabaseClient.js';
 import { LEAD_STAGES } from '../utils/constants.js';
 import { formatShortDate, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
+import { paymentForStage } from '../utils/conversion.js';
+
 function normalizeStage(stage) {
   if (stage === 'No contesto') return 'Seguimiento';
   if (stage === 'Nuevo Lead' || stage === 'Nuevo lead') return 'Nueva solicitud';
@@ -81,7 +83,7 @@ export default function Pipeline() {
     setError('');
     const { error: updateError } = await supabase
       .from('leads')
-      .update({ stage: nextStage, updated_at: new Date().toISOString() })
+      .update({ stage: nextStage, payment_status: paymentForStage(nextStage, lead.payment_status), updated_at: new Date().toISOString() })
       .eq('id', lead.id)
       .eq('organization_id', organizationId);
 
@@ -98,7 +100,7 @@ export default function Pipeline() {
       { previous_stage: previousStage, next_stage: nextStage }
     );
 
-    setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, stage: nextStage } : item)));
+    setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, stage: nextStage, payment_status: paymentForStage(nextStage, lead.payment_status) } : item)));
     setUpdatingId('');
   }
 
@@ -192,6 +194,7 @@ export default function Pipeline() {
     </div>
   );
 }
+
 
 
 

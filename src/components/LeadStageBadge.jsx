@@ -14,6 +14,8 @@ const stageColors = {
   Seguimiento: 'bg-yellow-50 text-yellow-700',
   'Listo para entregar': 'bg-lime-50 text-lime-700',
   'Cerrado ganado': 'bg-green-50 text-brand-success',
+  'Venta confirmada - deposito recibido': 'bg-blue-50 text-brand-blue',
+  'Trabajo completado y pagado': 'bg-green-50 text-brand-success',
   'Cerrado perdido': 'bg-red-50 text-brand-danger',
 };
 
@@ -35,3 +37,4 @@ export default function LeadStageBadge({ stage }) {
     </span>
   );
 }
+
