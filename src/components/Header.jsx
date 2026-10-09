@@ -1,10 +1,10 @@
 import React from 'react';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, X, Moon, Sun } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { APP_NAME, NAV_ITEMS } from '../utils/constants.js';
 
-export default function Header() {
+export default function Header({ darkMode, onToggleTheme }) {
   const { profile, organization, signOut } = useAuth();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = React.useState(false);
@@ -35,6 +35,10 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button type="button" onClick={onToggleTheme} aria-label={darkMode ? 'Activar modo claro' : 'Activar modo oscuro'} aria-pressed={darkMode} title={darkMode ? 'Activar modo claro' : 'Activar modo oscuro'} className="theme-toggle inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700">
+            {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            <span className="hidden md:inline">{darkMode ? 'Modo claro' : 'Modo oscuro'}</span>
+          </button>
           <div aria-hidden="true" className="hidden h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-sm font-bold text-brand-blue sm:flex">{(profile?.full_name || profile?.email || 'HS').slice(0,2).toUpperCase()}</div>
           <div className="hidden text-right sm:block">
             <p className="text-sm font-semibold text-brand-navy">{profile?.full_name || profile?.email}</p>
