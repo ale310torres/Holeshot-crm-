@@ -11,12 +11,12 @@ export default function MetricCard({ title, value, helper, tone = 'blue' }) {
   }[tone];
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+    <div className={`metric-card metric-${tone}`}>
       <p className="text-sm font-medium text-slate-500">{title}</p>
       <div className="mt-3 flex items-end justify-between gap-3">
-        <p className="text-3xl font-bold text-brand-navy">{value}</p>
-        <span className={`rounded-full px-3 py-1 text-xs font-bold ${toneClass}`}>{helper}</span>
+        <p className="metric-value text-brand-navy">{value}</p>
       </div>
+      <span className={`metric-helper ${toneClass}`}>{helper}</span>
     </div>
   );
 }

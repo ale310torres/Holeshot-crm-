@@ -137,15 +137,15 @@ export default function Dashboard() {
   if (loading) return <p className="text-slate-600">Cargando dashboard...</p>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="dashboard-page space-y-7">
+      <div className="dashboard-welcome flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-2xl font-black text-brand-navy">Dashboard</h2>
+            <h2 className="text-3xl font-bold text-brand-navy">Tu negocio de un vistazo</h2>
             <RoleBadge role={role} />
           </div>
           <p className="mt-1 text-slate-500">
-            {isManager ? 'Vista de taller, piezas, cotizaciones y seguimiento del equipo.' : 'Vista personal de tus oportunidades y seguimientos.'}
+            {isManager ? 'Clientes, resultados y próximos pasos de tu equipo.' : 'Tus oportunidades y próximos pasos, en un solo lugar.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -160,9 +160,10 @@ export default function Dashboard() {
 
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
-      <section aria-labelledby="lead-intake-heading" className="space-y-3">
+      <section aria-labelledby="lead-intake-heading" className="intake-section space-y-4">
         <div>
-          <h3 id="lead-intake-heading" className="font-bold text-brand-navy">Leads recibidos</h3>
+          <p className="section-eyebrow">Captación</p>
+          <h3 id="lead-intake-heading" className="text-xl font-bold text-brand-navy">Leads recibidos</h3>
           <p className="mt-1 text-sm text-slate-500">Según la fecha de entrada, en cualquier etapa. Se actualiza cada minuto.</p>
         </div>
         {intakeError && <p role="alert" className="text-sm text-brand-danger">No se pudieron cargar los leads recibidos. Se intentará de nuevo automáticamente.</p>}
@@ -174,6 +175,16 @@ export default function Dashboard() {
       </section>
 
       {conversionError && <p role="alert" className="text-sm text-brand-danger">No se pudo verificar la conversión con los pagos de Zoho. Actualiza la página para reintentar.</p>}
+      <section aria-labelledby="results-heading" className="space-y-4">
+        <div><p className="section-eyebrow">Resultados</p><h3 id="results-heading" className="text-xl font-bold text-brand-navy">De conversación a cliente</h3></div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard title="Conversión" value={conversionError ? '—' : percentage(customerMetrics.percentage)} helper={`${customerMetrics.converted} de ${customerMetrics.total} clientes únicos · incluye Zoho`} tone="green" />
+          <MetricCard title="Clientes convertidos" value={conversionError ? '—' : customerMetrics.converted} helper="Clientes únicos · depósito o factura pagada" tone="green" />
+          <MetricCard title="Trabajos completados" value={metrics.completed} helper="Terminados y pagados" tone="navy" />
+          <MetricCard title="Ganados por revisar" value={metrics.legacyWon} helper="Casos antiguos sin pago clasificado" tone="yellow" />
+        </div>
+      </section>
+      <div><p className="section-eyebrow">Operación</p><h3 className="text-xl font-bold text-brand-navy">Qué necesita atención</h3></div>
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Oportunidades" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis casos'} tone="navy" />
         <MetricCard title="Solicitudes nuevas" value={metrics.newLeads} helper="Entrantes" tone="blue" />
@@ -183,10 +194,6 @@ export default function Dashboard() {
         <MetricCard title="Urgentes" value={metrics.hot} helper="Prioridad" tone="red" />
         <MetricCard title="Tareas pendientes" value={metrics.pendingTasks} helper="Hoy" tone="cyan" />
         <MetricCard title="Tareas vencidas" value={metrics.overdueTasks} helper="Atencion" tone="red" />
-        <MetricCard title="Clientes convertidos" value={conversionError ? '—' : customerMetrics.converted} helper="Clientes únicos · depósito o factura pagada" tone="green" />
-        <MetricCard title="Trabajos completados" value={metrics.completed} helper="Terminados y pagados" tone="green" />
-        <MetricCard title="Ganados por revisar" value={metrics.legacyWon} helper="Casos antiguos sin pago clasificado" tone="yellow" />
-        <MetricCard title="Conversion" value={conversionError ? '—' : percentage(customerMetrics.percentage)} helper={`${customerMetrics.converted} de ${customerMetrics.total} clientes únicos · incluye Zoho`} tone="cyan" />
       </section>
 
       {isManager && (
