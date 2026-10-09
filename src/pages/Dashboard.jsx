@@ -16,6 +16,31 @@ export default function Dashboard() {
   const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [leadIntake, setLeadIntake] = useState(null);
+  const [intakeError, setIntakeError] = useState(false);
+
+  useEffect(() => {
+    if (!organizationId) return;
+    let active = true;
+    setLeadIntake(null);
+    async function loadIntake() {
+      const now = new Date();
+      const results = await Promise.all([1, 7, 30].map((days) =>
+        supabase.from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('organization_id', organizationId)
+          .gte('created_at', new Date(now.getTime() - days * 86400000).toISOString())
+          .lte('created_at', now.toISOString())
+      ));
+      if (!active) return;
+      const failed = results.some((result) => result.error || result.count === null);
+      setIntakeError(failed);
+      setLeadIntake(failed ? null : results.map((result) => result.count));
+    }
+    loadIntake();
+    const timer = setInterval(loadIntake, 60000);
+    return () => { active = false; clearInterval(timer); };
+  }, [organizationId]);
 
   useEffect(() => {
     async function loadDashboard() {
@@ -116,6 +141,19 @@ export default function Dashboard() {
 
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
+      <section aria-labelledby="lead-intake-heading" className="space-y-3">
+        <div>
+          <h3 id="lead-intake-heading" className="font-bold text-brand-navy">Leads recibidos</h3>
+          <p className="mt-1 text-sm text-slate-500">Según la fecha de entrada, en cualquier etapa. Se actualiza cada minuto.</p>
+        </div>
+        {intakeError && <p role="alert" className="text-sm text-brand-danger">No se pudieron cargar los leads recibidos. Se intentará de nuevo automáticamente.</p>}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MetricCard title="Últimas 24 horas" value={leadIntake?.[0] ?? '—'} helper="1 día" tone="blue" />
+          <MetricCard title="Últimos 7 días" value={leadIntake?.[1] ?? '—'} helper="1 semana" tone="cyan" />
+          <MetricCard title="Últimos 30 días" value={leadIntake?.[2] ?? '—'} helper="1 mes · 30 días" tone="navy" />
+        </div>
+      </section>
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Oportunidades" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis casos'} tone="navy" />
         <MetricCard title="Solicitudes nuevas" value={metrics.newLeads} helper="Entrantes" tone="blue" />
@@ -209,6 +247,7 @@ export default function Dashboard() {
     </div>
   );
 }
+
 
 
 
