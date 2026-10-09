@@ -7,9 +7,11 @@ export const LEAD_STAGES = [
   'Cotizacion enviada',
   'Esperando piezas',
   'Servicio agendado',
+  'Venta confirmada - deposito recibido',
   'En trabajo',
   'Seguimiento',
   'Listo para entregar',
+  'Trabajo completado y pagado',
   'Cerrado ganado',
   'Cerrado perdido',
 ];
@@ -134,6 +136,7 @@ export const SOURCES = [
   'n8n',
   'Otro',
 ];
+
 
 
 
