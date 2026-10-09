@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabaseClient.js';
 import { LEAD_STAGES } from '../utils/constants.js';
 import { formatShortDate, getCallHref, getEmailHref, getWhatsAppHref } from '../utils/formatters.js';
 
-import { paymentForStage } from '../utils/conversion.js';
+import {savePipelineStage} from '../lib/pipeline.js';
 
 function normalizeStage(stage) {
   if (stage === 'No contesto') return 'Seguimiento';
@@ -81,19 +81,9 @@ export default function Pipeline() {
 
     setUpdatingId(lead.id);
     setError('');
-    const { error: updateError } = await supabase
-      .from('leads')
-          .or('source.is.null,source.neq.Zoho Books')
-      .update({ stage: nextStage, payment_status: paymentForStage(nextStage, lead.payment_status), updated_at: new Date().toISOString() })
-      .eq('id', lead.id)
-      .eq('organization_id', organizationId);
-
-    if (updateError) {
-      setError('No se pudo actualizar la etapa.');
-      setUpdatingId('');
-      return;
-    }
-
+    try {
+    const saved=await savePipelineStage(supabase,organizationId,lead,nextStage);
+    setLeads((current) => current.map((item) => item.id===lead.id?{...item,...saved}:item));
     await logActivity(
       lead,
       'stage_changed',
@@ -101,8 +91,11 @@ export default function Pipeline() {
       { previous_stage: previousStage, next_stage: nextStage }
     );
 
-    setLeads((current) => current.map((item) => (item.id === lead.id ? { ...item, stage: nextStage, payment_status: paymentForStage(nextStage, lead.payment_status) } : item)));
-    setUpdatingId('');
+    } catch(error) {
+      setError(error.message || 'No se pudo actualizar la etapa.');
+    } finally {
+      setUpdatingId('');
+    }
   }
 
   return (
