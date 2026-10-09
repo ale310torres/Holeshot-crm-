@@ -75,7 +75,7 @@ export default async function handler(req,res) {
       return res.json({url:'https://accounts.zoho.com/oauth/v2/auth?'+new URLSearchParams({scope:SCOPES,client_id:env('ZOHO_CLIENT_ID'),response_type:'code',access_type:'offline',prompt:'consent',redirect_uri:CALLBACK,state})});
     }
     const connection=await client.from('zoho_connections').select('*').eq('organization_id',profile.organization_id).single();
-    if(action==='status') return res.json({connected:!!connection.data&&!connection.error});
+    if(action==='status') return res.json({connected:!!connection.data&&!connection.error,background_enabled:!!process.env.CRON_SECRET&&process.env.CRON_SECRET.length>=32});
     if (connection.error) return res.status(409).json({error:'Primero conecta Zoho Books.'});
     const access=await getAccess(client,profile.organization_id,connection.data);
     if(action==='sync') return res.json(await syncOrganization(client,profile.organization_id,access,books,documentRow));
