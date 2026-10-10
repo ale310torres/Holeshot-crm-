@@ -1,4 +1,6 @@
 import ZohoSync from '../components/ZohoSync.jsx';
+import { Link } from 'react-router-dom';
+import { duplicatePairs, duplicateReason } from '../utils/duplicates.js';
 import React, { useEffect, useMemo, useState,useRef } from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {intakeWindow,loadIntakeLeads} from '../utils/intake.js';
@@ -40,12 +42,17 @@ export default function Leads() {
   const loadVersion=useRef(0);
   const { organizationId, organization, user, profile, salesRepId, isManager } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [directory, setDirectory] = useState([]);
+  const [createMatches, setCreateMatches] = useState([]);
+  const [confirmedNew, setConfirmedNew] = useState(false);
+  const duplicates = useMemo(() => duplicatePairs(directory), [directory]);
   const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [filters, setFilters] = useState({ search: '', stage: '', lead_temperature: '', source: '' });
+  useEffect(() => { setCreateMatches([]);setConfirmedNew(false); }, [form.full_name,form.phone,form.email,showForm]);
 
   async function loadLeads() {
     const version=++loadVersion.current;
@@ -71,6 +78,12 @@ export default function Leads() {
   useEffect(() => {
     if (organizationId) loadLeads();
   }, [organizationId,intake]);
+
+  useEffect(() => {
+    let active=true;
+    if(organizationId)loadIntakeLeads(supabase,organizationId,null).then(rows=>{if(active)setDirectory(rows);}).catch(()=>{});
+    return()=>{active=false;};
+  }, [organizationId,leads]);
 
   const filteredLeads = useMemo(() => {
     const search = filters.search.trim().toLowerCase();
@@ -111,6 +124,17 @@ export default function Leads() {
   async function handleCreateLead(event) {
     event.preventDefault();
     setError('');
+    if(!confirmedNew) {
+      try {
+        const rows=await loadIntakeLeads(supabase,organizationId,null);
+        const matches=rows.filter(row=>duplicateReason(form,row));
+        setCreateMatches(matches);
+        if(matches.length)return;
+      } catch {
+        setError('No se pudo comprobar si el cliente ya existe. Reintenta antes de crear la oportunidad.');
+        return;
+      }
+    }
     const selectedRep = salesReps.find((rep) => rep.id === form.assigned_rep_id);
     const assignedRepId = isManager ? form.assigned_rep_id || null : salesRepId || null;
     const assignedTo = isManager ? form.assigned_to || selectedRep?.name || '' : profile?.full_name || form.assigned_to || '';
@@ -144,6 +168,7 @@ export default function Leads() {
 
     await logActivity(data.id, 'lead_created', 'Oportunidad creada manualmente desde el CRM.');
     setForm(emptyForm);
+    setCreateMatches([]);setConfirmedNew(false);
     setShowForm(false);
     loadLeads();
   }
@@ -181,6 +206,11 @@ export default function Leads() {
       </div>
 
       {isManager && <ZohoSync organizationId={organizationId} onUpdated={loadLeads} />}
+      {duplicates.length > 0 && <details className="rounded-lg border border-slate-200 bg-white p-4">
+        <summary className="cursor-pointer font-semibold text-brand-navy">Revisar posibles duplicados ({duplicates.length})</summary>
+        <p className="mt-2 text-sm text-slate-500">Coincidencias por teléfono, correo o nombre. Pueden ser trabajos distintos del mismo cliente; no se fusionan ni se eliminan automáticamente.</p>
+        <ul className="mt-3 space-y-3">{duplicates.map(({a,b,reason})=><li key={`${a.id}-${b.id}`} className="text-sm text-slate-700"><Link className="font-semibold text-brand-blue underline" to={`/leads/${a.id}`}>{a.full_name}</Link> · <Link className="font-semibold text-brand-blue underline" to={`/leads/${b.id}`}>{b.full_name}</Link><p className="text-xs text-slate-500">{reason}</p></li>)}</ul>
+      </details>}
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -219,6 +249,11 @@ export default function Leads() {
       {showForm && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-navy/50 px-4 py-8">
           <form onSubmit={handleCreateLead} className="mx-auto max-w-2xl rounded-lg bg-white p-6 shadow-soft">
+            {createMatches.length > 0 && <div role="alert" className="mb-5 rounded-lg border border-slate-200 p-4 text-sm text-slate-700">
+              <p className="font-semibold">Este cliente podría existir. Revisa su ficha antes de guardar.</p>
+              {createMatches.map(row=><Link key={row.id} to={`/leads/${row.id}`} className="mt-2 block text-brand-blue underline">{row.full_name} · {duplicateReason(form,row)} · Ver ficha</Link>)}
+              <label className="mt-3 flex items-center gap-2"><input type="checkbox" checked={confirmedNew} onChange={event=>setConfirmedNew(event.target.checked)} />Confirmo que es una nueva oportunidad y debe quedar separada.</label>
+            </div>}
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-xl font-bold text-brand-navy">Nueva oportunidad Holeshot</h3>
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg bg-slate-100 p-2 text-slate-600">
