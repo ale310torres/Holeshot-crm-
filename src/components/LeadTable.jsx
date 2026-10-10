@@ -48,7 +48,10 @@ export default function LeadTable({ leads, onMarkContacted, businessName,showRec
                 <td className="px-4 py-4 text-sm font-semibold text-slate-700">{lead.sales_reps?.name || lead.assigned_to || 'Sin asignar'}</td>
                 <td className="px-4 py-4"><LeadStageBadge stage={lead.stage} /></td>
                 <td className="max-w-[220px] truncate px-4 py-4 text-sm text-slate-600">{lead.next_action || 'Sin proxima accion'}</td>
-                <td className="px-4 py-4 text-sm text-slate-500">{showReceivedTime?new Date(lead.created_at).toLocaleString('es-PR',{timeZone:'America/La_Paz'}):formatShortDate(lead.created_at)}</td>
+                <td className="px-4 py-4 text-sm text-slate-500">
+                  <p>{showReceivedTime?new Date(lead.created_at).toLocaleString('es-PR',{timeZone:'America/La_Paz'}):formatShortDate(lead.created_at)}</p>
+                  {lead.source === 'Zoho Books' && <p className="mt-1 text-xs">Importado de Zoho · cliente existente</p>}
+                </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
                     <Link to={`/leads/${lead.id}`} className="rounded-lg bg-brand-navy p-2 text-white" title="Ver detalle">

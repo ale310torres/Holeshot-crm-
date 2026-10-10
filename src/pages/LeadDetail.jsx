@@ -186,7 +186,8 @@ export default function LeadDetail() {
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
           <div>
             <h2 className="text-2xl font-black text-brand-navy">{lead.full_name || 'Sin nombre'}</h2>
-            <p className="mt-1 text-slate-500">{formatVehicleSummary(form)} / creado el {formatDate(lead.created_at)}</p>
+            <p className="mt-1 text-slate-500">{formatVehicleSummary(form)} / {lead.source === 'Zoho Books' ? 'importado de Zoho el' : 'registrado en CRM el'} {formatDate(lead.created_at)}</p>
+            {lead.source === 'Zoho Books' && <p className="mt-1 text-sm text-slate-500">Cliente existente. Esta es la fecha de importación, no de captación; no se cuenta como lead nuevo.</p>}
             <div className="mt-4 flex flex-wrap gap-2">
               <LeadTemperatureBadge temperature={form.lead_temperature} />
               <LeadStageBadge stage={form.stage} />
