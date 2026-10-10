@@ -99,6 +99,13 @@ textarea {
 .crm-dark .crm-main input::placeholder, .crm-dark .crm-main textarea::placeholder { color: #8d9fab; }
 .crm-dark .crm-main section.min-w-\[300px\] { background: #111e27; border-color: #2b3a45; }
 .crm-dark .theme-toggle:hover { background: #243641; }
+.crm-dark :is(.text-cyan-700, .text-teal-700, .text-lime-700) { color: #86dec9; }
+.crm-dark :is(.text-indigo-700, .text-purple-700, .text-sky-700) { color: #c0c4ff; }
+.crm-dark :is(.text-amber-700, .text-orange-700) { color: #f4c387; }
+.crm-dark .text-red-700 { color: #f6a0a7; }
+.crm-dark :is(.bg-indigo-50, .bg-purple-50, .bg-sky-50) { background: #2b304b; }
+.crm-dark :is(.bg-amber-50, .bg-orange-50) { background: #3d3223; }
+.crm-dark :is(.bg-teal-50, .bg-lime-50) { background: #163b30; }
 
 
 
