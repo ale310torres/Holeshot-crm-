@@ -6,10 +6,10 @@ export default {
       colors: {
         brand: {
           navy: '#101814',
-          blue: '#B91C36',
-          cyan: '#FB7185',
+          blue: '#1749D1',
+          cyan: '#5285FF',
           light: '#F5F7F4',
-          success: '#B91C36',
+          success: '#1749D1',
           danger: '#DC2626',
           warning: '#FACC15',
         },
@@ -21,4 +21,5 @@ export default {
   },
   plugins: [],
 };
+
 
