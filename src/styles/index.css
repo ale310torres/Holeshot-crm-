@@ -107,5 +107,78 @@ textarea {
 .crm-dark :is(.bg-amber-50, .bg-orange-50) { background: #3d3223; }
 .crm-dark :is(.bg-teal-50, .bg-lime-50) { background: #163b30; }
 
+/* Refined layout: fewer visual containers, neutral surfaces, clear hierarchy. */
+.crm-shell { background: #f7f8fa; }
+.crm-sidebar { background: #fff; border-color: #e8ebef; color: #202b35; }
+.crm-sidebar > div:first-child { border-color: #e8ebef; }
+.crm-sidebar nav a { color: #65717c; font-weight: 500; border-radius: 8px; margin-bottom: 4px; padding-top: 11px; padding-bottom: 11px; }
+.crm-sidebar nav a:hover { background: #f3f6f5; color: #202b35; }
+.crm-sidebar nav a.crm-nav-active { background: #edf6f1; color: #13764e; box-shadow: none; font-weight: 600; }
+.crm-sidebar nav a svg { width: 18px; height: 18px; }
+.crm-sidebar > div:last-child { border-color: #e8ebef; }
+.crm-sidebar > div:last-child .text-white { color: #34434e; }
+.crm-sidebar .crm-monogram { width: 36px; height: 36px; border-radius: 10px; background: #0f7a4d; color: #fff; }
+.crm-sidebar > div:first-child p.text-lg { font-size: 16px; }
+.crm-sidebar nav > p { letter-spacing: .12em; font-size: 9px; }
+.crm-header > div:first-child { min-height: 72px; }
+.crm-header h1 { font-size: 16px; font-weight: 600; }
+.crm-header button { border-radius: 8px; }
+.crm-main { padding-top: 30px; }
+.dashboard-welcome h2 { font-size: 28px; font-weight: 600; }
+.dashboard-welcome > div:last-child a { font-size: 13px; font-weight: 600; padding: 11px 16px; }
+.crm-main h3 { font-weight: 600; }
+.section-eyebrow { color: #87938e; font-weight: 500; font-size: 9px; letter-spacing: .12em; }
+.intake-section { padding: 22px 24px; background: #fff; border: 1px solid #e8ebef; border-radius: 14px; }
+.intake-section > div.grid { gap: 0; }
+.intake-section a { border-radius: 0; }
+.intake-section a + a { border-left: 1px solid #e8ebef; }
+.intake-section .metric-card { background: transparent; border: 0; border-radius: 0; box-shadow: none; min-height: 118px; padding: 14px 22px 0; }
+.intake-section a:first-child .metric-card { padding-left: 0; }
+.intake-section a:hover .metric-card { transform: none; background: #f7faf8; }
+.metric-value { font-size: 32px; font-weight: 600; }
+.metric-helper { font-size: 11px; margin-top: 9px; font-weight: 400; }
+.results-grid { gap: 0; background: #fff; border: 1px solid #e8ebef; border-radius: 14px; overflow: hidden; }
+.results-grid .metric-card { border: 0; box-shadow: none; border-radius: 0; background: transparent; min-height: 150px; padding: 22px; }
+.results-grid .metric-card + .metric-card { border-left: 1px solid #e8ebef; }
+.results-grid .metric-card:first-child .metric-value { color: #0f7a4d; }
+.operations-grid { gap: 12px; }
+.operations-grid .metric-card { min-height: 128px; border: 1px solid #e8ebef; border-radius: 12px; padding: 17px 20px; box-shadow: none; }
+.operations-grid .metric-value { font-size: 27px; }
+.crm-main section.rounded-lg, .crm-main div.rounded-lg.border.bg-white { border-radius: 12px; box-shadow: none; }
+.crm-main th { text-transform: none; letter-spacing: 0; font-size: 11px; font-weight: 500; }
+.crm-main table td { font-size: 13px; }
+.crm-main article { box-shadow: none; border-radius: 10px; }
+.crm-dark { background: #101416; }
+.crm-dark .crm-sidebar { background: #151a1d; color: #e0e7ea; border-color: #2b3236; }
+.crm-dark .crm-sidebar > div:first-child, .crm-dark .crm-sidebar > div:last-child { border-color: #2b3236; }
+.crm-dark .crm-sidebar > div:last-child .text-white { color: #d1dbdf; }
+.crm-dark .crm-sidebar nav a { color: #a2adb4; }
+.crm-dark .crm-sidebar nav a:hover { background: #20282b; color: #eef4f7; }
+.crm-dark .crm-sidebar nav a.crm-nav-active { background: #21352c; color: #91dfb5; }
+.crm-dark .crm-header { background: #151a1d; border-color: #2b3236; }
+.crm-dark .intake-section, .crm-dark .results-grid { background: #191f23; border-color: #2b3236; }
+.crm-dark .intake-section a + a, .crm-dark .results-grid .metric-card + .metric-card { border-color: #2b3236; }
+.crm-dark .intake-section .metric-card, .crm-dark .results-grid .metric-card { background: transparent; }
+.crm-dark .intake-section a:hover .metric-card { background: #202a25; }
+.crm-dark .metric-card, .crm-dark .crm-main :is(.bg-white, .bg-white\/95) { background: #191f23; }
+.crm-dark .results-grid .metric-card:first-child .metric-value { color: #91dfb5; }
+.crm-dark .operations-grid .metric-card { border-color: #2b3236; }
+@media (min-width: 640px) and (max-width: 1279px) {
+  .results-grid .metric-card:nth-child(3) { border-left: 0; }
+  .results-grid .metric-card:nth-child(n+3) { border-top: 1px solid #e8ebef; }
+  .crm-dark .results-grid .metric-card:nth-child(n+3) { border-color: #2b3236; }
+}
+@media (max-width: 639px) {
+  .crm-header > div:first-child { min-height: 64px; }
+  .dashboard-welcome h2 { font-size: 24px; }
+  .intake-section { padding: 18px 16px; }
+  .intake-section > div.grid { gap: 0; }
+  .intake-section .metric-card { padding: 10px 9px 0; min-height: 116px; }
+  .intake-section .metric-value { font-size: 27px; }
+  .results-grid .metric-card { min-height: 126px; }
+  .results-grid .metric-card + .metric-card { border-left: 0; border-top: 1px solid #e8ebef; }
+  .crm-dark .results-grid .metric-card + .metric-card { border-color: #2b3236; }
+}
+
 
 

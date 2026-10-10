@@ -177,7 +177,7 @@ export default function Dashboard() {
       {conversionError && <p role="alert" className="text-sm text-brand-danger">No se pudo verificar la conversión con los pagos de Zoho. Actualiza la página para reintentar.</p>}
       <section aria-labelledby="results-heading" className="space-y-4">
         <div><p className="section-eyebrow">Resultados</p><h3 id="results-heading" className="text-xl font-bold text-brand-navy">De conversación a cliente</h3></div>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="results-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard title="Conversión" value={conversionError ? '—' : percentage(customerMetrics.percentage)} helper={`${customerMetrics.converted} de ${customerMetrics.total} clientes únicos · incluye Zoho`} tone="green" />
           <MetricCard title="Clientes convertidos" value={conversionError ? '—' : customerMetrics.converted} helper="Clientes únicos · depósito o factura pagada" tone="green" />
           <MetricCard title="Trabajos completados" value={metrics.completed} helper="Terminados y pagados" tone="navy" />
@@ -185,7 +185,7 @@ export default function Dashboard() {
         </div>
       </section>
       <div><p className="section-eyebrow">Operación</p><h3 className="text-xl font-bold text-brand-navy">Qué necesita atención</h3></div>
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="operations-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Oportunidades" value={metrics.total} helper={isManager ? 'Equipo' : 'Mis casos'} tone="navy" />
         <MetricCard title="Solicitudes nuevas" value={metrics.newLeads} helper="Entrantes" tone="blue" />
         <MetricCard title="Servicios" value={metrics.service} helper="Taller" tone="cyan" />
