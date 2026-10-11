@@ -21,3 +21,21 @@ export function duplicatePairs(leads) {
   }
   return pairs;
 }
+
+// Customer view only: every original opportunity remains available and unchanged.
+export function groupCustomerRecords(leads) {
+  const confirmedPeyo = new Set(['2f1ee921-1aaa-4511-9f12-befd08db6f67','6df12c6e-5815-42cf-9279-782d60c5ede2']);
+  const groups=[];
+  for(const lead of leads) {
+    const match=groups.find(group=>group.some(row=>{
+      if(row.organization_id !== lead.organization_id)return false;
+      if(confirmedPeyo.has(row.id)&&confirmedPeyo.has(lead.id))return true;
+      return ['Mismo teléfono','Mismo correo'].includes(duplicateReason(row,lead));
+    }));
+    if(match)match.push(lead);else groups.push([lead]);
+  }
+  return groups.map(records=>{
+    const primary=records.find(row=>row.source!=='Zoho Books')||records[0];
+    return {...primary,customer_records:records};
+  });
+}

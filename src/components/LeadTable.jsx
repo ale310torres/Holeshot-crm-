@@ -34,6 +34,10 @@ export default function LeadTable({ leads, onMarkContacted, businessName,showRec
                 <td className="px-4 py-4">
                   <p className="font-semibold text-brand-navy">{lead.full_name || 'Sin nombre'}</p>
                   <p className="text-xs text-slate-500">{lead.property_city || lead.email || 'Sin zona'}</p>
+                  {lead.customer_records?.length>1 && <details className="mt-2 text-xs text-slate-500">
+                    <summary className="cursor-pointer text-brand-blue">{lead.customer_records.length} registros del cliente</summary>
+                    <div className="mt-2 space-y-2">{lead.customer_records.map(row=><Link key={row.id} to={`/leads/${row.id}`} className="block text-brand-blue underline">{row.full_name} · {row.source||'Manual'} · {row.stage} · {formatShortDate(row.created_at)}</Link>)}</div>
+                  </details>}
                 </td>
                 <td className="px-4 py-4 text-sm text-slate-600">{lead.phone || '-'}</td>
                 <td className="px-4 py-4 text-sm text-slate-600">{formatVehicleSummary(lead)}</td>

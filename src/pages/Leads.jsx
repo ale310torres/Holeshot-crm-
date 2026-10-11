@@ -1,6 +1,6 @@
 import ZohoSync from '../components/ZohoSync.jsx';
 import { Link } from 'react-router-dom';
-import { duplicatePairs, duplicateReason } from '../utils/duplicates.js';
+import { duplicatePairs, duplicateReason, groupCustomerRecords } from '../utils/duplicates.js';
 import React, { useEffect, useMemo, useState,useRef } from 'react';
 import {useSearchParams} from 'react-router-dom';
 import {intakeWindow,loadIntakeLeads} from '../utils/intake.js';
@@ -45,6 +45,7 @@ export default function Leads() {
   const [directory, setDirectory] = useState([]);
   const [createMatches, setCreateMatches] = useState([]);
   const [confirmedNew, setConfirmedNew] = useState(false);
+  const [groupCustomers,setGroupCustomers] = useState(true);
   const duplicates = useMemo(() => duplicatePairs(directory), [directory]);
   const [salesReps, setSalesReps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,6 +215,10 @@ export default function Leads() {
       {error && <div className="rounded-lg bg-red-50 px-4 py-3 text-sm font-semibold text-brand-danger">{error}</div>}
 
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="w-full flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div><h3 className="font-semibold text-brand-navy">{groupCustomers?'Clientes agrupados':'Registros de oportunidades'}</h3><p className="text-sm text-slate-500">Un solo cliente por teléfono o correo coincidente. Abre sus registros para consultar cada trabajo. Los nombres parecidos permanecen separados.</p></div>
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={groupCustomers} onChange={event=>setGroupCustomers(event.target.checked)} />Agrupar por cliente</label>
+        </div>
         <div><h3 className="font-bold text-brand-navy">{intake?'Leads recibidos':'Período de entrada'}</h3>
           <p className="text-sm text-slate-500">{intake?(loading?'Cargando leads del período…':`${filteredLeads.length} leads · ${intake.days===1?'Últimas 24 horas':'Últimos '+intake.days+' días'}. Incluye todas las etapas; excluye importaciones de Zoho.`):'Selecciona un período para ver quién entró.'}</p>
           {intake&&<p className="text-xs text-slate-500">Desde {new Date(intake.start).toLocaleString('es-PR',{timeZone:'America/La_Paz'})} hasta {new Date(intake.end).toLocaleString('es-PR',{timeZone:'America/La_Paz'})}.</p>}
@@ -244,7 +249,7 @@ export default function Leads() {
         </select>
       </section>
 
-      {loading ? <p className="text-slate-600">Cargando oportunidades...</p> : intake&&!filteredLeads.length?<p className="rounded-lg border border-slate-200 bg-white p-5">No hay leads para este período y los filtros seleccionados.</p>:<LeadTable leads={filteredLeads} onMarkContacted={handleMarkContacted} businessName={organization?.name} showReceivedTime={!!intake} />}
+      {loading ? <p className="text-slate-600">Cargando oportunidades...</p> : intake&&!filteredLeads.length?<p className="rounded-lg border border-slate-200 bg-white p-5">No hay leads para este período y los filtros seleccionados.</p>:<LeadTable leads={groupCustomers?groupCustomerRecords(filteredLeads):filteredLeads} onMarkContacted={handleMarkContacted} businessName={organization?.name} showReceivedTime={!!intake} />}
 
       {showForm && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-brand-navy/50 px-4 py-8">
